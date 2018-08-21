@@ -80,41 +80,44 @@ Tile_Status:
 ; 7 - orange (top/down)
 DS 28
 
+Ball_Status:
+DS 7
+
 SECTION "Constants", ROM0
 SRAM_check EQU 42 ; TODO: change?
 
 Tile_Positions:
 DW $9821
-DW Tile_Positions+2
-DW Tile_Positions+4
-DW Tile_Positions+6
-DW Tile_Positions+8
-DW Tile_Positions+10
-DW Tile_Positions+12
+DW $9821+2
+DW $9821+4
+DW $9821+6
+DW $9821+8
+DW $9821+10
+DW $9821+12
 
-DW Tile_Positions+40
-DW Tile_Positions+42
-DW Tile_Positions+44
-DW Tile_Positions+46
-DW Tile_Positions+48
-DW Tile_Positions+50
-DW Tile_Positions+52
+DW $9821+40
+DW $9821+42
+DW $9821+44
+DW $9821+46
+DW $9821+48
+DW $9821+50
+DW $9821+52
 
-DW Tile_Positions+80
-DW Tile_Positions+82
-DW Tile_Positions+84
-DW Tile_Positions+86
-DW Tile_Positions+88
-DW Tile_Positions+90
-DW Tile_Positions+92
+DW $9821+80
+DW $9821+82
+DW $9821+84
+DW $9821+86
+DW $9821+88
+DW $9821+90
+DW $9821+92
 
-DW Tile_Positions+120
-DW Tile_Positions+122
-DW Tile_Positions+124
-DW Tile_Positions+126
-DW Tile_Positions+128
-DW Tile_Positions+130
-DW Tile_Positions+132
+DW $9821+120
+DW $9821+122
+DW $9821+124
+DW $9821+126
+DW $9821+128
+DW $9821+130
+DW $9821+132
 
 SECTION "HiRAM", HRAM
 
@@ -235,43 +238,142 @@ GenerateLevel:
     call wait_vblank
     ld    hl, TileLabel
     ld    de, _VRAM        ; $8000
-    ld    bc, 8*16*8
+    ld    bc, 37*16
     call    mem_CopyVRAM    ; load tile data
-    ld    hl, MapLabel
-    ld    de, _SCRN0
-    ld    bc, 32*32
-    call    mem_CopyVRAM    ; load bg map data
+;    ld    hl, MapLabel
+;    ld    a, [Tile_Positions]
+;    sub   a, $21
+;    ld    e, a
+;    ld    a, [Tile_Positions+1]
+;    ld    d, a
+;    ld    bc, 32*32
+;    call    mem_CopyVRAM    ; load bg map data
 
-    ld hl, PATRICK_Y
-    ld a, 64
-    ld [hl+], a
-    ld a, 64
+;    ld hl, PATRICK_Y
+;    ld a, 64
+;    ld [hl+], a
+;    ld a, 64
+;    ld [hl], a
+;
+;    call wait_vblank
+;    ld hl, _OAMRAM
+;    ld a, [PATRICK_Y]
+;    ld [hl+], a
+;    ld a, [PATRICK_X]
+;    ld [hl+], a
+;    ld a, 9
+;    ld [hl+], a
+;    inc hl
+;    ld a, [PATRICK_Y]
+;    ld [hl+], a
+;    ld a, [PATRICK_X]
+;    add a, 8
+;    ld [hl+], a
+;    ld a, 10
+;    ld [hl+], a
+
+    ld c, 7
+.ball_loop:
+    push bc
+    call RandomTile
+    pop bc
+    ld b, a ; b is now tile
+    ld hl, Ball_Status
+    ld a, c
+    dec a
+    add a, h ; TODO or h
+    ld l, a
+    ld [hl], b ; save ball status
+    ld hl, Tile_Status
+    ld a, b
+    add a, h  ; TODO or h?
+    ld l, a
+    ld a, 1
+    cp a, [hl] ; does this tile contain something > 1, ie. not patrick?
+    jr c, .next_ball ; if so, go to next ball
+    ld [hl], c ; store ball
+.next_ball:
+    dec c
+    jr z, Load_Level
+    jr .ball_loop
+
+Load_Level:
+    ld a, 0
+.draw_tile:
+    push af
+    ld hl, Tile_Positions
+    ld de, Tile_Status
+    sla a
+    add a, l
+    ld l, a
+    pop af
+    push af
+    sla a
+    add a, e
+    ld e, a
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+
+    ld a, [de]
+    cp a, 0
+    jr z, .empty_tile
+
+    sla a
+    sla a
+    add a, 12
     ld [hl], a
-
-    call wait_vblank
-    ld hl, _OAMRAM
-    ld a, [PATRICK_Y]
-    ld [hl+], a
-    ld a, [PATRICK_X]
-    ld [hl+], a
-    ld a, 9
-    ld [hl+], a
     inc hl
-    ld a, [PATRICK_Y]
-    ld [hl+], a
-    ld a, [PATRICK_X]
-    add a, 8
-    ld [hl+], a
-    ld a, 10
-    ld [hl+], a
+    inc a
+    ld [hl], a
+    inc a
+    ld bc, $41
+    add hl, bc
+    ld [hl], a
+    inc hl
+    inc a
+    ld [hl], a
+    jr .done
 
+.empty_tile:
+    ld [hl], 1
+    inc hl
+    ld [hl], 2
+    ld bc, $41
+    add hl, bc
+    ld [hl], 3
+    inc hl
+    ld [hl], 4
+
+.done:
+    pop af
+    inc a
+    cp a, 27
+    jr nz, .draw_tile
+
+;Draw_Level:
+;    
+;
+;
+;
+;    call wait_vblank
+;    ld    hl, TileLabel
+;    ld    de, _VRAM        ; $8000
+;    ld    bc, 8*16*8
+;    call    mem_CopyVRAM    ; load tile data
+;    ld    hl, MapLabel
+;    ld    a, [Tile_Positions]
+;    sub   a, $21
+;    ld    e, a
+;    ld    a, [Tile_Positions+1]
+;    ld    d, a
+;    ld    bc, 32*32
+;    call    mem_CopyVRAM    ; load bg map data
+;    
+;
 .wait:
     halt
     jr .wait
-
-
-
-
 
 RandomTile:
     ; http://www.devrs.com/gb/files/random.txt
@@ -338,10 +440,10 @@ DivFoo:
     rla
     add hl, hl
     rra
-    and a, %01111111
     jr nc, .noCarry
     inc hl
 .noCarry
+    and a, %01111111
     ;sbc hl,bc    ;240
 REPT 8
     rl b
@@ -362,13 +464,8 @@ ENDR
     jr nc,DivLoop ;23|21
     inc e        ;--
     jr DivLoop+1
-DivDone
+DivDone:
 ;;;;;;;;
 
     ld a, e
     ret
-
-
-
-
-

@@ -1,4 +1,4 @@
-; PATRICK.INC
+; PATRICK_TILES.INC
 ;
 ; Include File.
 ;
@@ -10,7 +10,7 @@
 ;   Compression          : None.
 ;   Counter              : None.
 ;   Tile size            : 8 x 8
-;   Tiles                : 0 to 12
+;   Tiles                : 0 to 37
 ;
 ;   Palette colors       : None.
 ;   SGB Palette          : None.
@@ -27,4 +27,4 @@ TileLabelBank EQU 0
 ; Start of tile array.
  GLOBAL TileLabel
 
-; End of PATRICK.INC
+; End of PATRICK_TILES.INC

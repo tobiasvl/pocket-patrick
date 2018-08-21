@@ -18,6 +18,11 @@ SECTION    "Serial",ROM0[$0058]
 SECTION    "p1thru4",ROM0[$0060]
     reti
 
+SECTION "Math Div 16 Ram",bss
+
+_MD16temp    ds 2
+_MD16count   db
+
 SECTION "FreeSpace",ROM0[$0068]
 INCLUDE "memory.inc"
 
@@ -88,36 +93,36 @@ SRAM_check EQU 42 ; TODO: change?
 
 Tile_Positions:
 DW $9821
-DW $9821+2
-DW $9821+4
-DW $9821+6
-DW $9821+8
-DW $9821+10
-DW $9821+12
+DW $9821+$2
+DW $9821+$4
+DW $9821+$6
+DW $9821+$8
+DW $9821+$a
+DW $9821+$c
 
-DW $9821+40
-DW $9821+42
-DW $9821+44
-DW $9821+46
-DW $9821+48
-DW $9821+50
-DW $9821+52
+DW $9821+$40
+DW $9821+$42
+DW $9821+$44
+DW $9821+$46
+DW $9821+$48
+DW $9821+$4a
+DW $9821+$4c
 
-DW $9821+80
-DW $9821+82
-DW $9821+84
-DW $9821+86
-DW $9821+88
-DW $9821+90
-DW $9821+92
+DW $9821+$80
+DW $9821+$82
+DW $9821+$84
+DW $9821+$86
+DW $9821+$88
+DW $9821+$8a
+DW $9821+$8c
 
-DW $9821+120
-DW $9821+122
-DW $9821+124
-DW $9821+126
-DW $9821+128
-DW $9821+130
-DW $9821+132
+DW $9821+$c0
+DW $9821+$c2
+DW $9821+$c4
+DW $9821+$c6
+DW $9821+$c8
+DW $9821+$ca
+DW $9821+$cc
 
 SECTION "HiRAM", HRAM
 
@@ -215,8 +220,8 @@ init:
     call mem_Set
 
     ; Blank WRAM
-    ld hl, _RAM
-    ld bc, $DFFD-_RAM+1 ; Don't clear stack
+    ld hl, _RAM+3
+    ld bc, $DFFD-_RAM-2 ; Don't clear seed
     call mem_Set
 
     ld h, 0
@@ -278,19 +283,21 @@ GenerateLevel:
     call RandomTile
     pop bc
     ld b, a ; b is now tile
+
     ld hl, Ball_Status
     ld a, c
     dec a
-    add a, h ; TODO or h
+    add a, l ; TODO or h
     ld l, a
+
     ld [hl], b ; save ball status
     ld hl, Tile_Status
     ld a, b
-    add a, h  ; TODO or h?
+    add a, l  ; TODO or h?
     ld l, a
-    ld a, 1
-    cp a, [hl] ; does this tile contain something > 1, ie. not patrick?
-    jr c, .next_ball ; if so, go to next ball
+    ;ld a, 1
+    ;cp a, [hl] ; does this tile contain something > 1, ie. not patrick?
+    ;jr c, .next_ball ; if so, go to next ball
     ld [hl], c ; store ball
 .next_ball:
     dec c
@@ -321,13 +328,14 @@ Load_Level:
 
     sla a
     sla a
-    add a, 12
+    add a, 13
+    call wait_vblank
     ld [hl], a
     inc hl
     inc a
     ld [hl], a
     inc a
-    ld bc, $41
+    ld bc, $1f
     add hl, bc
     ld [hl], a
     inc hl
@@ -336,10 +344,11 @@ Load_Level:
     jr .done
 
 .empty_tile:
+    call wait_vblank
     ld [hl], 1
     inc hl
     ld [hl], 2
-    ld bc, $41
+    ld bc, $1f
     add hl, bc
     ld [hl], 3
     inc hl
@@ -348,29 +357,9 @@ Load_Level:
 .done:
     pop af
     inc a
-    cp a, 27
+    cp a, 28
     jr nz, .draw_tile
 
-;Draw_Level:
-;    
-;
-;
-;
-;    call wait_vblank
-;    ld    hl, TileLabel
-;    ld    de, _VRAM        ; $8000
-;    ld    bc, 8*16*8
-;    call    mem_CopyVRAM    ; load tile data
-;    ld    hl, MapLabel
-;    ld    a, [Tile_Positions]
-;    sub   a, $21
-;    ld    e, a
-;    ld    a, [Tile_Positions+1]
-;    ld    d, a
-;    ld    bc, 32*32
-;    call    mem_CopyVRAM    ; load bg map data
-;    
-;
 .wait:
     halt
     jr .wait
@@ -395,6 +384,7 @@ RandomTile:
     ld      a,[$fff4]          ; get divider register to increase randomness
     add     [hl]
 
+    ld b, b
 
     ; output = (input - input_start)*output_range / input_range + output_start;
 
@@ -424,48 +414,104 @@ Mul8bSkip:
     ld b, 0
     ld c, 255
 
+    ld b, b
 ;;;;;;;;;
-DE_Div_BC:          ;1281-2x, x is at most 16
-    ld a,16        ;7
-    ld hl,0        ;10
-    jr DivFoo         ;10
-DivLoop:
-    add hl,bc    ;--
-    dec a        ;64
-    jr z, DivDone        ;86
-DivFoo:
-    sla e        ;128
-    rl d         ;128
-    ;adc hl,hl    ;240
-    rla
-    add hl, hl
-    rra
-    jr nc, .noCarry
-    inc hl
-.noCarry
-    and a, %01111111
-    ;sbc hl,bc    ;240
-REPT 8
-    rl b
-    ccf
-ENDR
-    rl b
-REPT 8
-    rl c
-    ccf
-ENDR
-    rl c
-    jr c, .carry
-    inc bc
-.carry
-    add hl, bc
-    ccf
-
-    jr nc,DivLoop ;23|21
-    inc e        ;--
-    jr DivLoop+1
-DivDone:
+;DE_Div_BC:          ;1281-2x, x is at most 16
+;    ld a,16        ;7
+;    ld hl,0        ;10
+;    jr DivFoo         ;10
+;DivLoop:
+;    add hl,bc    ;--
+;    dec a        ;64
+;    jr z, DivDone        ;86
+;DivFoo:
+;    sla e        ;128
+;    rl d         ;128
+;    ;adc hl,hl    ;240
+;    rla
+;    add hl, hl
+;    rra
+;    jr nc, .noCarry
+;    inc hl
+;.noCarry
+;    and a, %01111111
+;    ;sbc hl,bc    ;240
+;REPT 8
+;    rl b
+;    ccf
+;ENDR
+;    rl b
+;REPT 8
+;    rl c
+;    ccf
+;ENDR
+;    rl c
+;    jr c, .carry
+;    inc bc
+;.carry
+;    add hl, bc
+;    ccf
+;
+;    jr nc,DivLoop ;23|21
+;    inc e        ;--
+;    jr DivLoop+1
+;DivDone:
 ;;;;;;;;
 
+; 16 bit division
+; DE = DE / BC, BC = remainder
+
+div_DE_BC_DEBCu:
+        ld      hl,_MD16temp
+        ld      [hl],c
+        inc     hl
+        ld      [hl],b
+        inc     hl
+        ld      [hl],17
+        ld      bc,0
+.nxtbit:
+        ld      hl,_MD16count
+        ld      a,e
+        rla
+        ld      e,a
+        ld      a,d
+        rla
+        ld      d,a
+        dec     [hl]
+        ret     z
+        ld      a,c
+        rla
+        ld      c,a
+        ld      a,b
+        rla
+        ld      b,a
+        dec     hl
+        dec     hl
+        ld      a,c
+        sub     [hl]
+        ld      c,a
+        inc     hl
+        ld      a,b
+        sbc     a,[hl]
+        ld      b,a
+        jr      nc,.noadd
+
+        dec     hl
+        ld      a,c
+        add     a,[hl]
+        ld      c,a
+        inc     hl
+        ld      a,b
+        adc     a,[hl]
+        ld      b,a
+.noadd:
+        ccf
+        jr      .nxtbit
+
+;;;;;;;;
+
+    ld b, b
     ld a, e
+    ld b, b
+;    and a, %00111111
     ret

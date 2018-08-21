@@ -137,5 +137,15 @@ mem_CopyVRAM::
     jr    nz,.loop
     ret
 
-        POPS           ; Pop the current section off of assember stack.
+; Print BGB debug messages
+DBGMSG: MACRO
+        ld  d, d
+        jr .end\@
+        DW $6464
+        DW $0000
+        DB \1
+.end\@:
+        ENDM
 
+
+        POPS           ; Pop the current section off of assember stack.

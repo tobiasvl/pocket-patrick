@@ -92,37 +92,38 @@ SECTION "Constants", ROM0
 SRAM_check EQU 42 ; TODO: change?
 
 Tile_Positions:
-DW $9821
-DW $9821+$2
-DW $9821+$4
-DW $9821+$6
-DW $9821+$8
-DW $9821+$a
-DW $9821+$c
+board_start = $9863
+DW board_start
+DW board_start+$2
+DW board_start+$4
+DW board_start+$6
+DW board_start+$8
+DW board_start+$a
+DW board_start+$c
 
-DW $9821+$40
-DW $9821+$42
-DW $9821+$44
-DW $9821+$46
-DW $9821+$48
-DW $9821+$4a
-DW $9821+$4c
+DW board_start+$40
+DW board_start+$42
+DW board_start+$44
+DW board_start+$46
+DW board_start+$48
+DW board_start+$4a
+DW board_start+$4c
 
-DW $9821+$80
-DW $9821+$82
-DW $9821+$84
-DW $9821+$86
-DW $9821+$88
-DW $9821+$8a
-DW $9821+$8c
+DW board_start+$80
+DW board_start+$82
+DW board_start+$84
+DW board_start+$86
+DW board_start+$88
+DW board_start+$8a
+DW board_start+$8c
 
-DW $9821+$c0
-DW $9821+$c2
-DW $9821+$c4
-DW $9821+$c6
-DW $9821+$c8
-DW $9821+$ca
-DW $9821+$cc
+DW board_start+$c0
+DW board_start+$c2
+DW board_start+$c4
+DW board_start+$c6
+DW board_start+$c8
+DW board_start+$ca
+DW board_start+$cc
 
 SECTION "HiRAM", HRAM
 
@@ -245,14 +246,6 @@ GenerateLevel:
     ld    de, _VRAM        ; $8000
     ld    bc, 37*16
     call    mem_CopyVRAM    ; load tile data
-;    ld    hl, MapLabel
-;    ld    a, [Tile_Positions]
-;    sub   a, $21
-;    ld    e, a
-;    ld    a, [Tile_Positions+1]
-;    ld    d, a
-;    ld    bc, 32*32
-;    call    mem_CopyVRAM    ; load bg map data
 
 ;    ld hl, PATRICK_Y
 ;    ld a, 64
@@ -315,7 +308,7 @@ Load_Level:
     ld l, a
     pop af
     push af
-    sla a
+    ;sla a
     add a, e
     ld e, a
     ld a, [hl+]
@@ -328,7 +321,7 @@ Load_Level:
 
     sla a
     sla a
-    add a, 13
+    add a, 5
     call wait_vblank
     ld [hl], a
     inc hl
@@ -358,7 +351,7 @@ Load_Level:
     pop af
     inc a
     cp a, 28
-    jr nz, .draw_tile
+    jp nz, .draw_tile
 
 .wait:
     halt
@@ -384,8 +377,6 @@ RandomTile:
     ld      a,[$fff4]          ; get divider register to increase randomness
     add     [hl]
 
-    ld b, b
-
     ; output = (input - input_start)*output_range / input_range + output_start;
 
     ; (a - 0) * 27 / 255 + 0;
@@ -408,55 +399,10 @@ Mul8bSkip:
     jr nz, Mul8bLoop
 ;;;;;;;;;
 
-
     ld d, h
     ld e, l
     ld b, 0
     ld c, 255
-
-    ld b, b
-;;;;;;;;;
-;DE_Div_BC:          ;1281-2x, x is at most 16
-;    ld a,16        ;7
-;    ld hl,0        ;10
-;    jr DivFoo         ;10
-;DivLoop:
-;    add hl,bc    ;--
-;    dec a        ;64
-;    jr z, DivDone        ;86
-;DivFoo:
-;    sla e        ;128
-;    rl d         ;128
-;    ;adc hl,hl    ;240
-;    rla
-;    add hl, hl
-;    rra
-;    jr nc, .noCarry
-;    inc hl
-;.noCarry
-;    and a, %01111111
-;    ;sbc hl,bc    ;240
-;REPT 8
-;    rl b
-;    ccf
-;ENDR
-;    rl b
-;REPT 8
-;    rl c
-;    ccf
-;ENDR
-;    rl c
-;    jr c, .carry
-;    inc bc
-;.carry
-;    add hl, bc
-;    ccf
-;
-;    jr nc,DivLoop ;23|21
-;    inc e        ;--
-;    jr DivLoop+1
-;DivDone:
-;;;;;;;;
 
 ; 16 bit division
 ; DE = DE / BC, BC = remainder
@@ -478,7 +424,7 @@ div_DE_BC_DEBCu:
         rla
         ld      d,a
         dec     [hl]
-        ret     z
+        jr      z,.done
         ld      a,c
         rla
         ld      c,a
@@ -508,10 +454,6 @@ div_DE_BC_DEBCu:
         ccf
         jr      .nxtbit
 
-;;;;;;;;
-
-    ld b, b
+.done:
     ld a, e
-    ld b, b
-;    and a, %00111111
     ret

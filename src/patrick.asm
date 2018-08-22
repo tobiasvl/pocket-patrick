@@ -396,7 +396,7 @@ GameLoop:
     jr nz,.right
     ldh a,[hPadPressed]
     and BUTTON_UP
-    jr nz,.up
+    jp nz,.up
     ldh a,[hPadPressed]
     and BUTTON_DOWN
     jr nz,.down
@@ -408,6 +408,7 @@ GameLoop:
     jp nz,.button_b
     jr GameLoop
 .left:
+    call RandomTile
     ld hl, MARKER_X
     ld a, [hl]
     ld b, a
@@ -432,6 +433,7 @@ GameLoop:
     call draw_marker
     jr GameLoop
 .right:
+    call RandomTile
     ld a, [PATRICK_X]
     add a, 16
     ld b, a
@@ -455,6 +457,7 @@ GameLoop:
     call draw_marker
     jr GameLoop
 .down:
+    call RandomTile
     ld a, [PATRICK_Y]
     add a, 16
     ld b, a
@@ -463,11 +466,11 @@ GameLoop:
     ld a, [hl]
 
     cp a, b
-    jr nc, GameLoop
+    jp nc, GameLoop
 
     ld b, $58
     cp a, b
-    jr nc, GameLoop
+    jp nc, GameLoop
 
     add a, 16
     ld [hl], a
@@ -480,6 +483,7 @@ GameLoop:
     call draw_marker
     jp GameLoop
 .up:
+    call RandomTile
     ld hl, MARKER_Y
     ld a, [hl]
     ld b, a
@@ -506,11 +510,13 @@ GameLoop:
     call draw_marker
     jp GameLoop
 .button_b:
+    call RandomTile
     ld a, [REMAINING_TILES]
     cp a, 28
     jp nz, GameLoop
     jp GenerateLevel
 .button_a:
+    call RandomTile
     ld a, [MARKER_TILE]
     ld hl, Tile_Status
     ;dec a
@@ -578,7 +584,10 @@ destroy_tile:
     ;dec a
     add a, l
     ld l, a
-    ld [hl], -1
+    ld a, -1
+    cp a, [hl]
+    jr z, .done ; was destroyed already
+    ld [hl], a
     ld hl, REMAINING_TILES
     dec [hl]
     ld hl, Tile_Positions
@@ -598,6 +607,7 @@ destroy_tile:
     add hl, bc
     ld [hl+], a
     ld [hl], a
+.done:
     pop af
     ret
 

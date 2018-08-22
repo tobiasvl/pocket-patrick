@@ -269,6 +269,10 @@ init:
     call StartLCD
 
 GenerateLevel:
+    xor a
+    ld hl, Tile_Status
+    ld bc, 28
+    call mem_Set
     ld c, 7
 .ball_loop:
     push bc
@@ -279,13 +283,13 @@ GenerateLevel:
     ld hl, Ball_Status
     ld a, c
     dec a
-    add a, l ; TODO or h
+    add a, l
     ld l, a
 
     ld [hl], b ; save ball status
     ld hl, Tile_Status
     ld a, b
-    add a, l  ; TODO or h?
+    add a, l
     ld l, a
     ;ld a, 1
     ;cp a, [hl] ; does this tile contain something > 1, ie. not patrick?
@@ -297,7 +301,7 @@ GenerateLevel:
     jr .ball_loop
 
 Load_Level:
-    ld a, 0
+    xor a
 .draw_tile:
     push af
     ld hl, Tile_Positions
@@ -324,15 +328,13 @@ Load_Level:
     sla a
     add a, $65
     call wait_vblank
-    ld [hl], a
-    inc hl
+    ld [hl+], a
     inc a
     ld [hl], a
     inc a
     ld bc, $1f
     add hl, bc
-    ld [hl], a
-    inc hl
+    ld [hl+], a
     inc a
     ld [hl], a
     jr .done
@@ -355,21 +357,26 @@ Load_Level:
     jr .done
 
 .empty_tile:
+    ld a, $61
     call wait_vblank
-    ld [hl], $61
-    inc hl
-    ld [hl], $62
+    ld [hl+], a
+    inc a
+    ld [hl], a
+    inc a
     ld bc, $1f
     add hl, bc
-    ld [hl], $63
-    inc hl
-    ld [hl], $64
+    ld [hl+], a
+    inc a
+    ld [hl], a
 
 .done:
     pop af
     inc a
     cp a, 28
     jp nz, .draw_tile
+
+    ld hl, REMAINING_TILES
+    ld [hl], a
 
  PRINT "LEVEL:", $9983
  PRINT "SCORE:", $99A3
@@ -394,6 +401,9 @@ GameLoop:
     ldh a,[hPadPressed]
     and BUTTON_A
     jp nz,.button_a
+    ldh a,[hPadPressed]
+    and BUTTON_B
+    jp nz,.button_b
     jr GameLoop
 .left:
     ld hl, MARKER_X
@@ -493,6 +503,11 @@ GameLoop:
 
     call draw_marker
     jp GameLoop
+.button_b:
+    ld a, [REMAINING_TILES]
+    cp a, 28
+    jp nz, GameLoop
+    jp GenerateLevel
 .button_a:
     ld a, [MARKER_TILE]
     ld hl, Tile_Status
@@ -509,6 +524,8 @@ GameLoop:
     ; destroy patrick's tile
     ld a, [PATRICK_TILE]
     call destroy_tile
+
+    ; if this is a ball tile, destroy appropriate tiles
 
     ; move patrick to new tile
     ld a, [MARKER_TILE]
@@ -534,12 +551,10 @@ GameLoop:
     ld a, [MARKER_Y]
     ld [PATRICK_Y], a
 
-    ; if this is a ball tile, destroy appropriate tiles
-
-    ld a, 2
+    ld a, 1
     ld hl, REMAINING_TILES
     cp a, [hl]
-    ;jp c, win
+    jp z, GenerateLevel
 
     ; check for lose condition
 
@@ -617,24 +632,6 @@ draw_marker:
     pop af
     pop hl
     ret
-;.draw_marker:
-;    call wait_vblank
-;    ld hl, _OAMRAM+4
-;    ld a, [MARKER_Y]
-;    ld [hl+], a
-;    ld a, [MARKER_X]
-;    ld [hl+], a
-;    ld a, $85
-;    ld [hl+], a
-;    inc hl
-;    ld a, [MARKER_Y]
-;    ld [hl+], a
-;    ld a, [MARKER_X]
-;    add a, 8
-;    ld [hl+], a
-;    ld a, $86
-;    ld [hl], a
-;    jr .done
 
 draw_patrick:
     call wait_vblank
@@ -647,24 +644,6 @@ draw_patrick:
     inc hl
     ld [hl], $6c
     ret
-    ;push hl
-    ;call wait_vblank
-    ;ld hl, _OAMRAM
-    ;ld a, [PATRICK_Y]
-    ;ld [hl+], a
-    ;ld a, [PATRICK_X]
-    ;ld [hl+], a
-    ;ld a, $69
-    ;ld [hl+], a
-    ;inc hl
-    ;ld a, [PATRICK_Y]
-    ;ld [hl+], a
-    ;ld a, [PATRICK_X]
-    ;add a, 8
-    ;ld [hl+], a
-    ;ld a, $6b
-    ;ld [hl+], a
-    ;pop hl
 
 RandomTile:
     ; http://www.devrs.com/gb/files/random.txt

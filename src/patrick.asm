@@ -74,10 +74,14 @@ PATRICK_Y: DB
 PATRICK_X: DB
 PATRICK_TILE: DB
 LEVEL_NUMBER: DB
+LEVEL_BCD: DB
 REMAINING_TILES: DB
 SCORE: DB
+SCORE_BCD: DB
 SCORE_WIN: DB
+SCORE_WIN_BCD: DB
 SCORE_LOSE: DB
+SCORE_LOSE_BCD: DB
 
 Tile_Status:
 ; 1 - patrick
@@ -230,11 +234,14 @@ init:
     ld bc, $DFFD-_RAM-2 ; Don't clear seed
     call mem_Set
 
+    ld a, %11101111 ; palette
+    ld [rOBP0], a
+
     ld hl, TilesFont
     ld de, $8300
-    ld bc, 16*10
+    ld bc, 16*11
     call mem_CopyVRAM
-    ld hl, TilesFont+(16*10)
+    ld hl, TilesFont+(16*11)
     ld de, $8410
     ld bc, 16*26
     call mem_CopyVRAM
@@ -329,6 +336,8 @@ Load_Level:
     jr .done
 
 .patrick:
+    pop af
+    push af
     ld [PATRICK_TILE], a
     ld [MARKER_TILE], a
     call get_sprite_position
@@ -338,6 +347,54 @@ Load_Level:
     ld a, e
     ld [PATRICK_X], a
     ld [MARKER_X], a
+
+.draw_patrick:
+    call wait_vblank
+    ld [hl], $69
+    inc hl
+    ld [hl], $6b
+    ld bc, $1f
+    add hl, bc
+    ld [hl], $6a
+    inc hl
+    ld [hl], $6c
+    ;push hl
+    ;call wait_vblank
+    ;ld hl, _OAMRAM
+    ;ld a, [PATRICK_Y]
+    ;ld [hl+], a
+    ;ld a, [PATRICK_X]
+    ;ld [hl+], a
+    ;ld a, $69
+    ;ld [hl+], a
+    ;inc hl
+    ;ld a, [PATRICK_Y]
+    ;ld [hl+], a
+    ;ld a, [PATRICK_X]
+    ;add a, 8
+    ;ld [hl+], a
+    ;ld a, $6b
+    ;ld [hl+], a
+    ;pop hl
+
+.draw_marker:
+    call wait_vblank
+    ld hl, _OAMRAM+4
+    ld a, [MARKER_Y]
+    ld [hl+], a
+    ld a, [MARKER_X]
+    ld [hl+], a
+    ld a, $58
+    ld [hl+], a
+    inc hl
+    ld a, [MARKER_Y]
+    ld [hl+], a
+    ld a, [MARKER_X]
+    add a, 8
+    ld [hl+], a
+    ld a, $58
+    ld [hl], a
+    jr .done
 
 .empty_tile:
     call wait_vblank
@@ -356,39 +413,15 @@ Load_Level:
     cp a, 28
     jp nz, .draw_tile
 
- PRINT "LEVEL", $9983
- PRINT "SCORE", $99A3
- PRINT "WIN", $99C3
- PRINT "LOSE", $99E3
+ PRINT "LEVEL:", $9983
+ PRINT "SCORE:", $99A3
+ PRINT "WIN:", $99C3
+ PRINT "LOSE:", $99E3
 
 .wait:
     halt
     jr .wait
 
-;draw_patrick:
-;    call wait_vblank
-;    ld hl, PATRICK_Y
-;    ld a, 64
-;    ld [hl+], a
-;    ld a, 64
-;    ld [hl], a
-;
-;    call wait_vblank
-;    ld hl, _OAMRAM
-;    ld a, [PATRICK_Y]
-;    ld [hl+], a
-;    ld a, [PATRICK_X]
-;    ld [hl+], a
-;    ld a, 9
-;    ld [hl+], a
-;    inc hl
-;    ld a, [PATRICK_Y]
-;    ld [hl+], a
-;    ld a, [PATRICK_X]
-;    add a, 8
-;    ld [hl+], a
-;    ld a, 10
-;    ld [hl+], a
 
 ;draw_marker:
 
@@ -527,19 +560,41 @@ Mul8bSkip:
 ;    ret
 ;
 get_sprite_position:
-     ret
-;; from a BG map address, get the sprite position
-;; hl: map address
-;; d: Y pixel position
-;; e: X pixel position
-;    push af
-;
-;    ; Y
-;    ld a, l
-;    rl h
-;    add a, a
-;    rl 
-; 
-;    ; X
-;    ld a, l
-;    sub a, 
+; from a BG map address, get the sprite position
+; hl: map address
+; d: Y pixel position
+; e: X pixel position
+    push af
+    push hl
+    ld b,b
+ DBGMSG "finding position for %HL%"
+    ; Y
+    ; (0x94 & 0b00111111)*4
+    ld a, l
+    rrc h
+    rra
+    rrc h
+    rra
+    rrc h
+    rra
+    rrc h
+    rra
+    and a, %00111111
+    sla a
+    sla a
+    add a, 16 ; sprite offset
+    ld d, a
+
+    ; X
+    ; (0x53 & 0b00011111)*8
+    ld a, l
+    and %00011111
+    sla a
+    sla a
+    sla a
+    add a, 8 ; sprite offset
+    ld e, a
+ DBGMSG "it is %DE%"
+    pop hl
+    pop af
+    ret

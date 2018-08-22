@@ -236,6 +236,8 @@ init:
 
     ld a, %11101111 ; palette
     ld [rOBP0], a
+    ld a, %00000000
+    ld [rOBP1], a
     ld a, %11100100
     ld [rBGP], a
 

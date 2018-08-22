@@ -96,7 +96,7 @@ DS 28
 Ball_Status:
 DS 7
 
-SECTION "Constants", ROM0
+SECTION "Constants", ROM0, ALIGN[8]
 SRAM_check EQU 42 ; TODO: change?
 
 Tile_Positions:
@@ -236,6 +236,8 @@ init:
 
     ld a, %11101111 ; palette
     ld [rOBP0], a
+    ld a, %11100100
+    ld [rBGP], a
 
     ld hl, TilesFont
     ld de, $8300
@@ -248,7 +250,7 @@ init:
 
     ld    hl, TileLabel
     ld    de, $8600
-    ld    bc, 37*16
+    ld    bc, 41*16
     call    mem_CopyVRAM    ; load tile data
 
     ld h, 0
@@ -348,52 +350,8 @@ Load_Level:
     ld [PATRICK_X], a
     ld [MARKER_X], a
 
-.draw_patrick:
-    call wait_vblank
-    ld [hl], $69
-    inc hl
-    ld [hl], $6b
-    ld bc, $1f
-    add hl, bc
-    ld [hl], $6a
-    inc hl
-    ld [hl], $6c
-    ;push hl
-    ;call wait_vblank
-    ;ld hl, _OAMRAM
-    ;ld a, [PATRICK_Y]
-    ;ld [hl+], a
-    ;ld a, [PATRICK_X]
-    ;ld [hl+], a
-    ;ld a, $69
-    ;ld [hl+], a
-    ;inc hl
-    ;ld a, [PATRICK_Y]
-    ;ld [hl+], a
-    ;ld a, [PATRICK_X]
-    ;add a, 8
-    ;ld [hl+], a
-    ;ld a, $6b
-    ;ld [hl+], a
-    ;pop hl
-
-.draw_marker:
-    call wait_vblank
-    ld hl, _OAMRAM+4
-    ld a, [MARKER_Y]
-    ld [hl+], a
-    ld a, [MARKER_X]
-    ld [hl+], a
-    ld a, $58
-    ld [hl+], a
-    inc hl
-    ld a, [MARKER_Y]
-    ld [hl+], a
-    ld a, [MARKER_X]
-    add a, 8
-    ld [hl+], a
-    ld a, $58
-    ld [hl], a
+    call draw_patrick
+    call draw_marker
     jr .done
 
 .empty_tile:
@@ -418,12 +376,212 @@ Load_Level:
  PRINT "WIN:", $99C3
  PRINT "LOSE:", $99E3
 
-.wait:
-    halt
-    jr .wait
+GameLoop:
+    call wait_vblank
+    call ReadJoyPad
+    ldh a,[hPadPressed]
+    and BUTTON_LEFT
+    jr nz, .left
+    ldh a,[hPadPressed]
+    and BUTTON_RIGHT
+    jr nz,.right
+    ldh a,[hPadPressed]
+    and BUTTON_UP
+    jr nz,.up
+    ldh a,[hPadPressed]
+    and BUTTON_DOWN
+    jr nz,.down
+    ldh a,[hPadPressed]
+    and BUTTON_A
+    jp nz,.button_a
+    jr GameLoop
+.left:
+    ld hl, MARKER_X
+    ld a, [hl]
+    ld b, a
 
+    ld a, [PATRICK_X]
+    sub a, 16
 
-;draw_marker:
+    cp a, b
+    jr nc, GameLoop
+
+    ld a, b
+    ld b, $28
+    cp a, b
+    jr c, GameLoop
+
+    sub a, 16
+    ld [hl], a
+
+    ld hl, MARKER_TILE
+    dec [hl]
+
+    call draw_marker
+    jr GameLoop
+.right:
+    ld a, [PATRICK_X]
+    add a, 16
+    ld b, a
+
+    ld hl, MARKER_X
+    ld a, [hl]
+
+    cp a, b
+    jr nc, GameLoop
+
+    ld b, $80
+    cp a, b
+    jr nc, GameLoop
+
+    add a, 16
+    ld [hl], a
+
+    ld hl, MARKER_TILE
+    inc [hl]
+
+    call draw_marker
+    jr GameLoop
+.down:
+    ld a, [PATRICK_Y]
+    add a, 16
+    ld b, a
+
+    ld hl, MARKER_Y
+    ld a, [hl]
+
+    cp a, b
+    jr nc, GameLoop
+
+    ld b, $60
+    cp a, b
+    jr nc, GameLoop
+
+    add a, 16
+    ld [hl], a
+
+    ld hl, MARKER_TILE
+    inc [hl]
+
+    call draw_marker
+    jp GameLoop
+.up:
+    ld hl, MARKER_Y
+    ld a, [hl]
+    ld b, a
+
+    ld a, [PATRICK_Y]
+    sub a, 16
+
+    cp a, b
+    jp nc, GameLoop
+
+    ld a, b
+    ld b, $38
+    cp a, b
+    jp c, GameLoop
+
+    sub a, 16
+    ld [hl], a
+
+    ld hl, MARKER_TILE
+    dec [hl]
+
+    call draw_marker
+    jp GameLoop
+.button_a:
+
+draw_marker:
+    push hl
+    push af
+    call wait_vblank
+    ld hl, _OAMRAM+4
+    ld a, [MARKER_Y]
+    ld [hl+], a
+    ld a, [MARKER_X]
+    ld [hl+], a
+    ld a, $85
+    ld [hl+], a
+
+    inc hl
+    ld a, [MARKER_Y]
+    ld [hl+], a
+    ld a, [MARKER_X]
+    add a, 8
+    ld [hl+], a
+    ld a, $86
+    ld [hl+], a
+
+    inc hl
+    ld a, [MARKER_Y]
+    add a, 8
+    ld [hl+], a
+    ld a, [MARKER_X]
+    ld [hl+], a
+    ld a, $87
+    ld [hl+], a
+
+    inc hl
+    ld a, [MARKER_Y]
+    add a, 8
+    ld [hl+], a
+    ld a, [MARKER_X]
+    add a, 8
+    ld [hl+], a
+    ld a, $88
+    ld [hl+], a
+
+    pop af
+    pop hl
+    ret
+;.draw_marker:
+;    call wait_vblank
+;    ld hl, _OAMRAM+4
+;    ld a, [MARKER_Y]
+;    ld [hl+], a
+;    ld a, [MARKER_X]
+;    ld [hl+], a
+;    ld a, $85
+;    ld [hl+], a
+;    inc hl
+;    ld a, [MARKER_Y]
+;    ld [hl+], a
+;    ld a, [MARKER_X]
+;    add a, 8
+;    ld [hl+], a
+;    ld a, $86
+;    ld [hl], a
+;    jr .done
+
+draw_patrick:
+    call wait_vblank
+    ld [hl], $69
+    inc hl
+    ld [hl], $6b
+    ld bc, $1f
+    add hl, bc
+    ld [hl], $6a
+    inc hl
+    ld [hl], $6c
+    ret
+    ;push hl
+    ;call wait_vblank
+    ;ld hl, _OAMRAM
+    ;ld a, [PATRICK_Y]
+    ;ld [hl+], a
+    ;ld a, [PATRICK_X]
+    ;ld [hl+], a
+    ;ld a, $69
+    ;ld [hl+], a
+    ;inc hl
+    ;ld a, [PATRICK_Y]
+    ;ld [hl+], a
+    ;ld a, [PATRICK_X]
+    ;add a, 8
+    ;ld [hl+], a
+    ;ld a, $6b
+    ;ld [hl+], a
+    ;pop hl
 
 RandomTile:
     ; http://www.devrs.com/gb/files/random.txt
@@ -566,8 +724,6 @@ get_sprite_position:
 ; e: X pixel position
     push af
     push hl
-    ld b,b
- DBGMSG "finding position for %HL%"
     ; Y
     ; (0x94 & 0b00111111)*4
     ld a, l
@@ -594,7 +750,6 @@ get_sprite_position:
     sla a
     add a, 8 ; sprite offset
     ld e, a
- DBGMSG "it is %DE%"
     pop hl
     pop af
     ret

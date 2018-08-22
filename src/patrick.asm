@@ -528,6 +528,14 @@ GameLoop:
     call destroy_tile
 
     ; if this is a ball tile, destroy appropriate tiles
+    ld a, [MARKER_TILE]
+    ld b, a
+    ld hl, Tile_Status
+    add a, l
+    ld l, a
+    ld a, [hl]
+    cp a, 1
+    call nc, destroy_adjacent
 
     ; move patrick to new tile
     ld a, [MARKER_TILE]
@@ -563,6 +571,7 @@ GameLoop:
     jp GameLoop
 
 destroy_tile:
+    push af
     ; destroy tile number a
     ld hl, Tile_Status
     ld b, a
@@ -589,7 +598,83 @@ destroy_tile:
     add hl, bc
     ld [hl+], a
     ld [hl], a
+    pop af
     ret
+
+destroy_adjacent:
+    ; 2 - yellow (top)
+    ; 3 - blue (right)
+    ; 4 - darkblue (right/left)
+    ; 5 - green (left)
+    ; 6 - red (down)
+    ; 7 - orange (top/down)
+    cp a, 2
+    jr z, .up
+    cp a, 3
+    jr z, .right
+    cp a, 4
+    jr z, .right_left
+    cp a, 5
+    jr z, .left
+    cp a, 6
+    jr z, .down
+    cp a, 7
+    jr z, .up_down
+
+.up_down:
+    push bc
+    call .up
+    pop bc
+    call .down
+    ret
+
+.right_left:
+    push bc
+    call .right
+    pop bc
+    call .left
+    ret
+
+.up:
+    ld a, b
+    sub a, 8
+    ret c
+    call destroy_tile
+    inc a
+    call destroy_tile
+    inc a
+    call destroy_tile
+    ret
+.right:
+    ld a, b
+    sub a, 6
+    call destroy_tile
+    add a, 7
+    call destroy_tile
+    add a, 7
+    call destroy_tile
+    ret
+.left:
+    ld a, b
+    sub a, 8
+    call destroy_tile
+    add a, 7
+    call destroy_tile
+    add a, 7
+    call destroy_tile
+    ret
+.down:
+    ld a, b
+    add a, 6
+    cp a, 27
+    ret nc
+    call destroy_tile
+    inc a
+    call destroy_tile
+    inc a
+    call destroy_tile
+    ret
+    
 
 draw_marker:
     push hl

@@ -453,7 +453,7 @@ GameLoop:
     cp a, b
     jr nc, GameLoop
 
-    ld b, $60
+    ld b, $58
     cp a, b
     jr nc, GameLoop
 
@@ -461,7 +461,9 @@ GameLoop:
     ld [hl], a
 
     ld hl, MARKER_TILE
-    inc [hl]
+    ld a, [hl]
+    add a, 7
+    ld [hl], a
 
     call draw_marker
     jp GameLoop
@@ -485,11 +487,92 @@ GameLoop:
     ld [hl], a
 
     ld hl, MARKER_TILE
-    dec [hl]
+    ld a, [hl]
+    sub a, 7
+    ld [hl], a
 
     call draw_marker
     jp GameLoop
 .button_a:
+    ld a, [MARKER_TILE]
+    ld hl, Tile_Status
+    ;dec a
+    add a, l
+    ld l, a
+    ld a, [hl]
+    cp a, -1
+    jp z, GameLoop
+    cp a, 1
+    jp z, GameLoop
+    ; tile is not destroyed
+
+    ; destroy patrick's tile
+    ld a, [PATRICK_TILE]
+    call destroy_tile
+
+    ; move patrick to new tile
+    ld a, [MARKER_TILE]
+    ld [PATRICK_TILE], a
+    ld b, a
+    ld hl, Tile_Status
+    ;dec a
+    add a, l
+    ld l, a
+    ld [hl], 1
+    ld hl, Tile_Positions
+    ld a, b
+    ;dec a
+    sla a
+    add a, l
+    ld l, a
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+    call draw_patrick
+    ld a, [MARKER_X]
+    ld [PATRICK_X], a
+    ld a, [MARKER_Y]
+    ld [PATRICK_Y], a
+
+    ; if this is a ball tile, destroy appropriate tiles
+
+    ld a, 2
+    ld hl, REMAINING_TILES
+    cp a, [hl]
+    ;jp c, win
+
+    ; check for lose condition
+
+    jp GameLoop
+
+destroy_tile:
+    ; destroy tile number a
+    ld hl, Tile_Status
+    ld b, a
+    ;dec a
+    add a, l
+    ld l, a
+    ld [hl], -1
+    ld hl, REMAINING_TILES
+    dec [hl]
+    ld hl, Tile_Positions
+    ld a, b
+    ;dec a
+    sla a
+    add a, l
+    ld l, a
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+    call wait_vblank
+    xor a
+    ld [hl+], a
+    ld [hl], a
+    ld bc, $1f
+    add hl, bc
+    ld [hl+], a
+    ld [hl], a
+    ret
 
 draw_marker:
     push hl

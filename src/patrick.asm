@@ -18,10 +18,10 @@ SECTION    "Serial",ROM0[$0058]
 SECTION    "p1thru4",ROM0[$0060]
     reti
 
-SECTION "Math Div 16 Ram",bss
-
-_MD16temp    ds 2
-_MD16count   db
+;SECTION "Math Div 16 Ram",WRAM0
+;
+;_MD16temp    ds 2
+;_MD16count   db
 
 SECTION "FreeSpace",ROM0[$0068]
 INCLUDE "memory.inc"
@@ -74,6 +74,10 @@ PATRICK_Y: DB
 PATRICK_X: DB
 PATRICK_TILE: DB
 LEVEL_NUMBER: DB
+REMAINING_TILES: DB
+SCORE: DB
+SCORE_WIN: DB
+SCORE_LOSE: DB
 
 Tile_Status:
 ; 1 - patrick
@@ -188,6 +192,7 @@ ReadJoyPad::
 SECTION "Game tiles", ROM0
 INCLUDE "patrick_tiles.z80"
 INCLUDE "patrick_map.z80"
+INCLUDE "font.z80"
 
 SECTION "SRAM check", SRAM
 SRAM_present: DB
@@ -225,6 +230,20 @@ init:
     ld bc, $DFFD-_RAM-2 ; Don't clear seed
     call mem_Set
 
+    ld hl, TilesFont
+    ld de, $8300
+    ld bc, 16*10
+    call mem_CopyVRAM
+    ld hl, TilesFont+(16*10)
+    ld de, $8410
+    ld bc, 16*26
+    call mem_CopyVRAM
+
+    ld    hl, TileLabel
+    ld    de, $8600
+    ld    bc, 37*16
+    call    mem_CopyVRAM    ; load tile data
+
     ld h, 0
     ld l, h
     ld [hl], CART_RAM_ENABLE
@@ -241,35 +260,6 @@ init:
     call StartLCD
 
 GenerateLevel:
-    call wait_vblank
-    ld    hl, TileLabel
-    ld    de, _VRAM        ; $8000
-    ld    bc, 37*16
-    call    mem_CopyVRAM    ; load tile data
-
-;    ld hl, PATRICK_Y
-;    ld a, 64
-;    ld [hl+], a
-;    ld a, 64
-;    ld [hl], a
-;
-;    call wait_vblank
-;    ld hl, _OAMRAM
-;    ld a, [PATRICK_Y]
-;    ld [hl+], a
-;    ld a, [PATRICK_X]
-;    ld [hl+], a
-;    ld a, 9
-;    ld [hl+], a
-;    inc hl
-;    ld a, [PATRICK_Y]
-;    ld [hl+], a
-;    ld a, [PATRICK_X]
-;    add a, 8
-;    ld [hl+], a
-;    ld a, 10
-;    ld [hl+], a
-
     ld c, 7
 .ball_loop:
     push bc
@@ -318,10 +308,12 @@ Load_Level:
     ld a, [de]
     cp a, 0
     jr z, .empty_tile
+    cp a, 1
+    jr z, .patrick
 
     sla a
     sla a
-    add a, 5
+    add a, $65
     call wait_vblank
     ld [hl], a
     inc hl
@@ -336,16 +328,27 @@ Load_Level:
     ld [hl], a
     jr .done
 
+.patrick:
+    ld [PATRICK_TILE], a
+    ld [MARKER_TILE], a
+    call get_sprite_position
+    ld a, d
+    ld [PATRICK_Y], a
+    ld [MARKER_Y], a
+    ld a, e
+    ld [PATRICK_X], a
+    ld [MARKER_X], a
+
 .empty_tile:
     call wait_vblank
-    ld [hl], 1
+    ld [hl], $61
     inc hl
-    ld [hl], 2
+    ld [hl], $62
     ld bc, $1f
     add hl, bc
-    ld [hl], 3
+    ld [hl], $63
     inc hl
-    ld [hl], 4
+    ld [hl], $64
 
 .done:
     pop af
@@ -353,9 +356,41 @@ Load_Level:
     cp a, 28
     jp nz, .draw_tile
 
+ PRINT "LEVEL", $9983
+ PRINT "SCORE", $99A3
+ PRINT "WIN", $99C3
+ PRINT "LOSE", $99E3
+
 .wait:
     halt
     jr .wait
+
+;draw_patrick:
+;    call wait_vblank
+;    ld hl, PATRICK_Y
+;    ld a, 64
+;    ld [hl+], a
+;    ld a, 64
+;    ld [hl], a
+;
+;    call wait_vblank
+;    ld hl, _OAMRAM
+;    ld a, [PATRICK_Y]
+;    ld [hl+], a
+;    ld a, [PATRICK_X]
+;    ld [hl+], a
+;    ld a, 9
+;    ld [hl+], a
+;    inc hl
+;    ld a, [PATRICK_Y]
+;    ld [hl+], a
+;    ld a, [PATRICK_X]
+;    add a, 8
+;    ld [hl+], a
+;    ld a, 10
+;    ld [hl+], a
+
+;draw_marker:
 
 RandomTile:
     ; http://www.devrs.com/gb/files/random.txt
@@ -385,7 +420,6 @@ RandomTile:
     ld h, a
     ld e, 27
 
-;;;;;;;;;
 Mul8b:                           ; this routine performs the operation HL=H*E
     ld d,0                         ; clearing D and L
     ld l,d
@@ -397,63 +431,115 @@ Mul8bLoop:
 Mul8bSkip:
     dec b
     jr nz, Mul8bLoop
-;;;;;;;;;
 
-    ld d, h
-    ld e, l
-    ld b, 0
-    ld c, 255
+;    ld d, h
+;    ld e, l
+;    ld b, 0
+;    ld c, 255
 
 ; 16 bit division
 ; DE = DE / BC, BC = remainder
 
-div_DE_BC_DEBCu:
-        ld      hl,_MD16temp
-        ld      [hl],c
-        inc     hl
-        ld      [hl],b
-        inc     hl
-        ld      [hl],17
-        ld      bc,0
-.nxtbit:
-        ld      hl,_MD16count
-        ld      a,e
-        rla
-        ld      e,a
-        ld      a,d
-        rla
-        ld      d,a
-        dec     [hl]
-        jr      z,.done
-        ld      a,c
-        rla
-        ld      c,a
-        ld      a,b
-        rla
-        ld      b,a
-        dec     hl
-        dec     hl
-        ld      a,c
-        sub     [hl]
-        ld      c,a
-        inc     hl
-        ld      a,b
-        sbc     a,[hl]
-        ld      b,a
-        jr      nc,.noadd
-
-        dec     hl
-        ld      a,c
-        add     a,[hl]
-        ld      c,a
-        inc     hl
-        ld      a,b
-        adc     a,[hl]
-        ld      b,a
-.noadd:
-        ccf
-        jr      .nxtbit
-
-.done:
-    ld a, e
+;div_DE_BC_DEBCu:
+;        ld      hl,_MD16temp
+;        ld      [hl],c
+;        inc     hl
+;        ld      [hl],b
+;        inc     hl
+;        ld      [hl],17
+;        ld      bc,0
+;.nxtbit:
+;        ld      hl,_MD16count
+;        ld      a,e
+;        rla
+;        ld      e,a
+;        ld      a,d
+;        rla
+;        ld      d,a
+;        dec     [hl]
+;        jr      z,.done
+;        ld      a,c
+;        rla
+;        ld      c,a
+;        ld      a,b
+;        rla
+;        ld      b,a
+;        dec     hl
+;        dec     hl
+;        ld      a,c
+;        sub     [hl]
+;        ld      c,a
+;        inc     hl
+;        ld      a,b
+;        sbc     a,[hl]
+;        ld      b,a
+;        jr      nc,.noadd
+;
+;        dec     hl
+;        ld      a,c
+;        add     a,[hl]
+;        ld      c,a
+;        inc     hl
+;        ld      a,b
+;        adc     a,[hl]
+;        ld      b,a
+;.noadd:
+;        ccf
+;        jr      .nxtbit
+;
+;.done:
+;    ld a, e
+    ld a, h
     ret
+;
+;get_map_position:
+;; from a sprite's pixel position, get the BG map address.
+;; d: Y pixel position
+;; e: X pixel position
+;; hl: returned map address
+;    push af
+;
+;    ld h, HIGH(_SCRN0) >> 2
+;
+;    ; Y
+;    ld a, [rSCY] ; account for scroll
+;    sub a, 16    ; account for base sprite offset
+;    add a, d
+;    and $F8      ; snap to grid
+;    add a, a
+;    rl h
+;    add a, a
+;    rl h
+;    ld l, a
+;
+;    ; X
+;    ld a, [rSCX] ; account for scroll
+;    sub a, 8     ; account for base sprite offset
+;    add a, e
+;    and $F8      ; snap to grid
+;    rrca
+;    rrca
+;    rrca
+;    add a, l
+;    ld l, a
+;
+;    pop af
+;    ret
+;
+get_sprite_position:
+     ret
+;; from a BG map address, get the sprite position
+;; hl: map address
+;; d: Y pixel position
+;; e: X pixel position
+;    push af
+;
+;    ; Y
+;    ld a, l
+;    rl h
+;    add a, a
+;    rl 
+; 
+;    ; X
+;    ld a, l
+;    sub a, 

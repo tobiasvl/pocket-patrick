@@ -137,6 +137,17 @@ mem_CopyVRAM::
     jr    nz,.loop
     ret
 
+; Print string
+PRINT: MACRO
+.string\@:
+       DB \1
+.string_end\@:
+       ld hl, .string\@
+       ld de, \2
+       ld bc, .string_end\@-.string\@
+       call mem_CopyVRAM
+       ENDM
+
 ; Print BGB debug messages
 DBGMSG: MACRO
         ld  d, d

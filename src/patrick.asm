@@ -583,9 +583,9 @@ GameLoop:
 
     call print_info
 
-    ld a, 1
     ld hl, REMAINING_TILES
-    cp a, [hl]
+    ld a, [hl]
+    cp a, 1
     jp z, win
 
     ; check for lose condition
@@ -712,11 +712,12 @@ destroy_adjacent:
     cp a, 27
     ret z
     sub a, 6
-    call destroy_tile
+    call nc, destroy_tile
     add a, 7
     call destroy_tile
     add a, 7
-    call destroy_tile
+    cp a, 27
+    call c, destroy_tile
     ret
 .left:
     ld a, b
@@ -729,11 +730,12 @@ destroy_adjacent:
     cp a, 21
     ret z
     sub a, 8
-    call destroy_tile
+    call nc, destroy_tile
     add a, 7
     call destroy_tile
     add a, 7
-    call destroy_tile
+    cp a, 27
+    call c, destroy_tile
     ret
 .down:
     ld a, b

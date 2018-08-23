@@ -131,6 +131,10 @@ DW board_start+$c8
 DW board_start+$ca
 DW board_start+$cc
 
+PATRICK EQU $69
+LOSE_PATRICK EQU $89
+WIN_PATRICK EQU $8D
+
 SECTION "HiRAM", HRAM
 
 hPadPressed::   ds 1
@@ -251,7 +255,7 @@ init:
 
     ld    hl, TileLabel
     ld    de, $8600
-    ld    bc, 41*16
+    ld    bc, 49*16
     call    mem_CopyVRAM    ; load tile data
 
     ld h, 0
@@ -422,6 +426,7 @@ Load_Level:
     ld [PATRICK_X], a
     ld [MARKER_X], a
 
+    ld a, PATRICK
     call draw_patrick
     call init_marker
     jr .done
@@ -634,6 +639,7 @@ GameLoop:
     ld a, [hl+]
     ld h, [hl]
     ld l, a
+    ld a, $69
     call draw_patrick
     ld a, [MARKER_X]
     ld [PATRICK_X], a
@@ -728,6 +734,18 @@ GameLoop:
     jp nz, GameLoop
 
 lose:
+    ld a, [PATRICK_TILE]
+    ld hl, Tile_Positions
+    sla a
+    add a, l
+    ld l, a
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+
+    ld a, LOSE_PATRICK
+    call draw_patrick
+
     ld hl, LEVEL+1
     ld a, [hl]
     inc a
@@ -752,6 +770,18 @@ lose:
     jr game_over
 
 win:
+    ld a, [PATRICK_TILE]
+    ld hl, Tile_Positions
+    sla a
+    add a, l
+    ld l, a
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+
+    ld a, WIN_PATRICK
+    call draw_patrick
+
     ld hl, LEVEL+1
     ld a, [hl]
     inc a
@@ -787,7 +817,7 @@ win:
     ld [hl], h ; Disable SRAM
 
 game_over:
-    call wait_vblank
+
     ld a, [rLCDC]
     xor a, LCDCF_OBJON
     ld [rLCDC], a
@@ -1040,14 +1070,15 @@ draw_marker:
 
 draw_patrick:
     call wait_vblank
-    ld [hl], $69
-    inc hl
-    ld [hl], $6b
+    ld [hl+], a
+    add a, 2
+    ld [hl], a
     ld bc, $1f
     add hl, bc
-    ld [hl], $6a
-    inc hl
-    ld [hl], $6c
+    dec a
+    ld [hl+], a
+    add a, 2
+    ld [hl], a
     ret
 
 RandomTile:

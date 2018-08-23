@@ -73,15 +73,12 @@ MARKER_TILE: DB
 PATRICK_Y: DB
 PATRICK_X: DB
 PATRICK_TILE: DB
-LEVEL_NUMBER: DB
-LEVEL_BCD: DB
+LEVEL: DW
 REMAINING_TILES: DB
-SCORE: DB
-SCORE_BCD: DB
+STEPS: DB
+SCORE: DW
 SCORE_WIN: DB
-SCORE_WIN_BCD: DB
 SCORE_LOSE: DB
-SCORE_LOSE_BCD: DB
 
 Tile_Status:
 ; 1 - patrick
@@ -271,7 +268,11 @@ init:
     call StartLCD
 
 GenerateLevel:
+    ld a, $60
+    ld [SCORE_WIN], a
+    ld [SCORE_LOSE], a
     xor a
+    ld [STEPS], a
     ld hl, Tile_Status
     ld bc, 28
     call mem_Set
@@ -380,10 +381,11 @@ Load_Level:
     ld hl, REMAINING_TILES
     ld [hl], a
 
- PRINT "LEVEL:", $9983
- PRINT "SCORE:", $99A3
- PRINT "WIN:", $99C3
- PRINT "LOSE:", $99E3
+    PRINT "LEVEL:", $9983
+    PRINT "SCORE:", $99A3
+    PRINT "WIN:", $99C3
+    PRINT "LOSE:", $99E3
+    call print_info
 
 GameLoop:
     call wait_vblank
@@ -567,14 +569,46 @@ GameLoop:
     ld a, [MARKER_Y]
     ld [PATRICK_Y], a
 
+    ld hl, SCORE_WIN
+    ld a, [hl]
+    dec a
+    daa
+    ld [hl], a
+    ld hl, SCORE_LOSE
+    ld a, [hl]
+    inc a
+    daa
+    ld [hl], a
+    call wait_vblank
+
+    call print_info
+
     ld a, 1
     ld hl, REMAINING_TILES
     cp a, [hl]
-    jp z, GenerateLevel
+    jp z, win
 
     ; check for lose condition
 
     jp GameLoop
+
+win:
+    ld hl, LEVEL+1
+    ld a, [hl]
+    inc a
+    daa
+    ld [hl], a
+    ld hl, SCORE+1
+    ld a, [SCORE_WIN]
+    add a, [hl]
+    daa
+    ld [hl-], a
+    jp nc, GenerateLevel
+    ld a, [hl]
+    inc a
+    daa
+    ld [hl], a
+    jp GenerateLevel
 
 destroy_tile:
     push af
@@ -950,4 +984,76 @@ get_sprite_position:
     ld e, a
     pop hl
     pop af
+    ret
+
+print_info:
+    ld hl, $9989
+    ld de, LEVEL
+    ld a, [de]
+    sra a
+    sra a
+    sra a
+    sra a
+    and a, $0f
+    add a, $30
+    ld [hl+], a
+    ld a, [de]
+    and a, $0f
+    add a, $30
+    ld [hl+], a
+    inc de
+    ld a, [de]
+    and a, $0f
+    add a, $30
+    ld [hl], a
+
+    ld hl, $99a9
+    ld de, SCORE
+    ld a, [de]
+    and a, $0f
+    add a, $30
+    ld [hl+], a
+    inc de
+    ld a, [de]
+    sra a
+    sra a
+    sra a
+    sra a
+    and a, $0f
+    add a, $30
+    ld [hl+], a
+    ld a, [de]
+    and a, $0f
+    add a, $30
+    ld [hl], a
+
+    ld hl, $99ca
+    ld de, SCORE_WIN
+    ld a, [de]
+    sra a
+    sra a
+    sra a
+    sra a
+    and a, $0f
+    add a, $30
+    ld [hl+], a
+    ld a, [de]
+    and a, $0f
+    add a, $30
+    ld [hl], a
+
+    ld l, $ea
+    ld de, SCORE_LOSE
+    ld a, [de]
+    sra a
+    sra a
+    sra a
+    sra a
+    and a, $0f
+    add a, $30
+    ld [hl+], a
+    ld a, [de]
+    and a, $0f
+    add a, $30
+    ld [hl], a
     ret

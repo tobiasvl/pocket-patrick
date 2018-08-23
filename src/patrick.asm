@@ -94,6 +94,15 @@ DS 28
 Ball_Status:
 DS 7
 
+SpriteData:
+    DB 0,0,$85,0,0,0,$86,0,0,0,$87,0,0,0,$88,0
+    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+
 SECTION "Constants", ROM0, ALIGN[8]
 SRAM_check EQU 42 ; TODO: change?
 
@@ -984,48 +993,10 @@ destroy_adjacent:
     ret
 
 init_marker:
-    call wait_vblank
-    ld hl, MARKER_Y
-    ld d, [hl]
-    inc hl
-    ld e, [hl]
-
-    ld hl, _OAMRAM
-    ld a, d
-    ld [hl+], a
-    ld a, e
-    ld [hl+], a
-    ld a, $85
-    ld [hl+], a
-
-    inc hl
-    ld a, d
-    ld [hl+], a
-    ld a, e
-    add a, 8
-    ld [hl+], a
-    ld a, $86
-    ld [hl+], a
-
-    inc hl
-    ld a, d
-    add a, 8
-    ld [hl+], a
-    ld a, e
-    ld [hl+], a
-    ld a, $87
-    ld [hl+], a
-
-    inc hl
-    ld a, d
-    add a, 8
-    ld [hl+], a
-    ld a, e
-    add a, 8
-    ld [hl+], a
-    ld a, $88
-    ld [hl+], a
-
+    ld hl, SpriteData
+    ld de, _OAMRAM
+    ld bc, 4*4*7
+    call mem_CopyVRAM
     ret
 
 draw_marker:

@@ -423,7 +423,7 @@ Load_Level:
     ld [MARKER_X], a
 
     call draw_patrick
-    call draw_marker
+    call init_marker
     jr .done
 
 .empty_tile:
@@ -953,48 +953,89 @@ destroy_adjacent:
     call destroy_tile
     ret
 
-draw_marker:
-    push hl
-    push af
+init_marker:
     call wait_vblank
-    ld hl, _OAMRAM+4
-    ld a, [MARKER_Y]
+    ld hl, MARKER_Y
+    ld d, [hl]
+    inc hl
+    ld e, [hl]
+
+    ld hl, _OAMRAM
+    ld a, d
     ld [hl+], a
-    ld a, [MARKER_X]
+    ld a, e
     ld [hl+], a
     ld a, $85
     ld [hl+], a
 
     inc hl
-    ld a, [MARKER_Y]
+    ld a, d
     ld [hl+], a
-    ld a, [MARKER_X]
+    ld a, e
     add a, 8
     ld [hl+], a
     ld a, $86
     ld [hl+], a
 
     inc hl
-    ld a, [MARKER_Y]
+    ld a, d
     add a, 8
     ld [hl+], a
-    ld a, [MARKER_X]
+    ld a, e
     ld [hl+], a
     ld a, $87
     ld [hl+], a
 
     inc hl
-    ld a, [MARKER_Y]
+    ld a, d
     add a, 8
     ld [hl+], a
-    ld a, [MARKER_X]
+    ld a, e
     add a, 8
     ld [hl+], a
     ld a, $88
     ld [hl+], a
 
-    pop af
-    pop hl
+    ret
+
+draw_marker:
+    xor a
+    ld b, a
+    ld c, 3
+    ld hl, MARKER_Y
+    ld d, [hl]
+    inc hl
+    ld e, [hl]
+
+    call wait_vblank
+    ld hl, _OAMRAM
+    ld a, d
+    ld [hl+], a
+    ld a, e
+    ld [hl], a
+    add hl, bc
+
+    ld a, d
+    ld [hl+], a
+    ld a, e
+    add a, 8
+    ld [hl], a
+    add hl, bc
+
+    ld a, d
+    add a, 8
+    ld [hl+], a
+    ld a, e
+    ld [hl], a
+    add hl, bc
+
+    ld a, d
+    add a, 8
+    ld [hl+], a
+    ld a, e
+    add a, 8
+    ld [hl], a
+
     ret
 
 draw_patrick:

@@ -233,7 +233,7 @@ init:
     ld bc, $DFFD-_RAM-2 ; Don't clear seed
     call mem_Set
 
-    ld a, %11101111 ; palette
+    ld a, %10010011 ; palette
     ld [rOBP0], a
     ld a, %00000000
     ld [rOBP1], a
@@ -453,6 +453,10 @@ Load_Level:
     PRINT "WIN:", $99C3
     PRINT "LOSE:", $99E3
     call print_info
+    call wait_vblank
+    ld a, [rLCDC]
+    or a, LCDCF_OBJON
+    ld [rLCDC], a
 
 GameLoop:
     call wait_vblank
@@ -736,7 +740,7 @@ lose:
     ld hl, SCORE+1
     daa
     ld [hl-], a
-    jp nc, GenerateLevel
+    jr nc, game_over
     ld a, [hl]
     dec a
     daa
@@ -745,7 +749,7 @@ lose:
     ld [hl+], a
 .not_zero:
     ld [hl], a
-    jp GenerateLevel
+    jr game_over
 
 win:
     ld hl, LEVEL+1
@@ -766,11 +770,11 @@ win:
 .store_hiscore
     ld hl, HIGH_SCORE
     cp a, [hl]
-    jp c, GenerateLevel
+    jr c, game_over
     inc hl
     ld a, [SCORE+1]
     cp a, [hl]
-    jp c, GenerateLevel
+    jr c, game_over
     ld [hl-], a
     ld a, [SCORE]
     ld [hl], a
@@ -781,7 +785,22 @@ win:
     ld a, [SCORE+1]
     ld [SRAM_highscore+1], a
     ld [hl], h ; Disable SRAM
-    jp GenerateLevel
+
+game_over:
+    call wait_vblank
+    ld a, [rLCDC]
+    xor a, LCDCF_OBJON
+    ld [rLCDC], a
+.game_over_loop:
+    call wait_vblank
+    call ReadJoyPad
+    ldh a,[hPadPressed]
+    and BUTTON_A
+    jp nz, Play
+    ldh a,[hPadPressed]
+    and BUTTON_B
+    jp nz, GenerateLevel
+    jr .game_over_loop
 
 destroy_tile:
     push af

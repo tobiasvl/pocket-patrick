@@ -254,10 +254,10 @@ init:
     ld [rBGP], a
 
     ld hl, TilesFont
-    ld de, $8300
-    ld bc, 16*11
+    ld de, $82b0
+    ld bc, 16*16
     call mem_CopyVRAM
-    ld hl, TilesFont+(16*11)
+    ld hl, TilesFont+(16*16)
     ld de, $8410
     ld bc, 16*26
     call mem_CopyVRAM
@@ -293,12 +293,12 @@ init:
     PRINT "CHALLENGE",$9866
     PRINT "START",$98e8
     PRINT "TUTORIAL",$9908
-    PRINT "HISCORE",$99a4
+    PRINT "HISCORE:",$99a4
     PRINT "BY",$9a09
     PRINT "TOBIASVL",$9a26
 
     call wait_vblank
-    ld hl, $99ac
+    ld hl, $99ad
     ld de, HIGH_SCORE
     ld a, [de]
     and a, $0f
@@ -464,8 +464,8 @@ Load_Level:
 
     PRINT "LEVEL", $9983
     PRINT "SCORE", $99A3
-    PRINT "WIN", $99C3
-    PRINT "LOSE", $99E3
+    PRINT "WIN   +", $99C3
+    PRINT "LOSE  -", $99E3
     call print_info
     call wait_vblank
     ld a, [rLCDC]

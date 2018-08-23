@@ -73,7 +73,7 @@ MARKER_TILE: DB
 PATRICK_Y: DB
 PATRICK_X: DB
 PATRICK_TILE: DB
-LEVEL: DW
+LEVEL: DB
 REMAINING_TILES: DB
 STEPS: DB
 SCORE: DW
@@ -93,15 +93,6 @@ DS 28
 
 Ball_Status:
 DS 7
-
-SpriteData:
-    DB 0,0,$85,0,0,0,$86,0,0,0,$87,0,0,0,$88,0
-    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
-    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
-    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
-    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
-    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
-    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
 
 SECTION "Constants", ROM0, ALIGN[8]
 SRAM_check EQU 42 ; TODO: change?
@@ -143,6 +134,15 @@ DW board_start+$cc
 PATRICK EQU $69
 LOSE_PATRICK EQU $89
 WIN_PATRICK EQU $8D
+
+SpriteData:
+    DB 0,0,$85,0,0,0,$86,0,0,0,$87,0,0,0,$88,0
+    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
 
 SECTION "HiRAM", HRAM
 
@@ -462,10 +462,10 @@ Load_Level:
     ld hl, REMAINING_TILES
     ld [hl], a
 
-    PRINT "LEVEL:", $9983
-    PRINT "SCORE:", $99A3
-    PRINT "WIN:", $99C3
-    PRINT "LOSE:", $99E3
+    PRINT "LEVEL", $9983
+    PRINT "SCORE", $99A3
+    PRINT "WIN", $99C3
+    PRINT "LOSE", $99E3
     call print_info
     call wait_vblank
     ld a, [rLCDC]
@@ -755,7 +755,7 @@ lose:
     ld a, LOSE_PATRICK
     call draw_patrick
 
-    ld hl, LEVEL+1
+    ld hl, LEVEL
     ld a, [hl]
     inc a
     daa
@@ -791,7 +791,7 @@ win:
     ld a, WIN_PATRICK
     call draw_patrick
 
-    ld hl, LEVEL+1
+    ld hl, LEVEL
     ld a, [hl]
     inc a
     daa
@@ -1224,7 +1224,7 @@ get_sprite_position:
     ret
 
 print_info:
-    ld hl, $9989
+    ld hl, $998a
     ld de, LEVEL
     ld a, [de]
     sra a
@@ -1238,11 +1238,6 @@ print_info:
     and a, $0f
     add a, $30
     ld [hl+], a
-    inc de
-    ld a, [de]
-    and a, $0f
-    add a, $30
-    ld [hl], a
 
     ld hl, $99a9
     ld de, SCORE

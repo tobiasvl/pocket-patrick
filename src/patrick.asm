@@ -589,8 +589,92 @@ GameLoop:
     jp z, win
 
     ; check for lose condition
+    ld a, [PATRICK_Y]
+    sub a, 16
+    ld d, a
+    ld a, [PATRICK_X]
+    sub a, 16
+    ld e, a
+    call get_map_position
+    xor a
+    cp a, [hl]
+    jp nz, GameLoop
 
-    jp GameLoop
+    ld a, e
+    add a, 16
+    ld e, a
+    call get_map_position
+    xor a
+    cp a, [hl]
+    jp nz, GameLoop
+
+    ld a, e
+    add a, 16
+    ld e, a
+    call get_map_position
+    xor a
+    cp a, [hl]
+    jp nz, GameLoop
+
+    ld a, d
+    add a, 16
+    ld d, a
+    call get_map_position
+    xor a
+    cp a, [hl]
+    jp nz, GameLoop
+
+    ld a, d
+    add a, 16
+    ld d, a
+    call get_map_position
+    xor a
+    cp a, [hl]
+    jp nz, GameLoop
+
+    ld a, e
+    sub a, 16
+    ld e, a
+    call get_map_position
+    xor a
+    cp a, [hl]
+    jp nz, GameLoop
+
+    ld a, e
+    sub a, 16
+    ld e, a
+    call get_map_position
+    xor a
+    cp a, [hl]
+    jp nz, GameLoop
+
+    ld a, d
+    sub a, 16
+    ld d, a
+    call get_map_position
+    xor a
+    cp a, [hl]
+    jp nz, GameLoop
+
+lose:
+    ld hl, LEVEL+1
+    ld a, [hl]
+    inc a
+    daa
+    ld [hl], a
+    ld de, SCORE+1
+    ld hl, SCORE_LOSE
+    ld a, [de]
+    sub a, [hl]
+    ld hl, SCORE+1
+    daa
+    ld [hl-], a
+    jp nc, GenerateLevel
+    ld a, [hl]
+    dec a
+    daa
+    ld [hl], a
+    jp GenerateLevel
 
 win:
     ld hl, LEVEL+1
@@ -916,41 +1000,41 @@ Mul8bSkip:
 ;    ld a, e
     ld a, h
     ret
-;
-;get_map_position:
-;; from a sprite's pixel position, get the BG map address.
-;; d: Y pixel position
-;; e: X pixel position
-;; hl: returned map address
-;    push af
-;
-;    ld h, HIGH(_SCRN0) >> 2
-;
-;    ; Y
-;    ld a, [rSCY] ; account for scroll
-;    sub a, 16    ; account for base sprite offset
-;    add a, d
-;    and $F8      ; snap to grid
-;    add a, a
-;    rl h
-;    add a, a
-;    rl h
-;    ld l, a
-;
-;    ; X
-;    ld a, [rSCX] ; account for scroll
-;    sub a, 8     ; account for base sprite offset
-;    add a, e
-;    and $F8      ; snap to grid
-;    rrca
-;    rrca
-;    rrca
-;    add a, l
-;    ld l, a
-;
-;    pop af
-;    ret
-;
+
+get_map_position:
+; from a sprite's pixel position, get the BG map address.
+; d: Y pixel position
+; e: X pixel position
+; hl: returned map address
+    push af
+
+    ld h, HIGH(_SCRN0) >> 2
+
+    ; Y
+    ld a, [rSCY] ; account for scroll
+    sub a, 16    ; account for base sprite offset
+    add a, d
+    and $F8      ; snap to grid
+    add a, a
+    rl h
+    add a, a
+    rl h
+    ld l, a
+
+    ; X
+    ld a, [rSCX] ; account for scroll
+    sub a, 8     ; account for base sprite offset
+    add a, e
+    and $F8      ; snap to grid
+    rrca
+    rrca
+    rrca
+    add a, l
+    ld l, a
+
+    pop af
+    ret
+
 get_sprite_position:
 ; from a BG map address, get the sprite position
 ; hl: map address

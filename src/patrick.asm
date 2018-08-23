@@ -649,14 +649,34 @@ destroy_adjacent:
     ld a, b
     sub a, 8
     ret c
-    call destroy_tile
+    cp a, 6
+    jr z, .up_middle
+    cp a, 13
+    jr z, .up_middle
+    cp a, 20
+    call nz, destroy_tile
+.up_middle:
     inc a
     call destroy_tile
     inc a
+    cp a, 7
+    ret z
+    cp a, 14
+    ret z
+    cp a, 21
+    ret z
     call destroy_tile
     ret
 .right:
     ld a, b
+    cp a, 6
+    ret z
+    cp a, 13
+    ret z
+    cp a, 20
+    ret z
+    cp a, 27
+    ret z
     sub a, 6
     call destroy_tile
     add a, 7
@@ -666,6 +686,14 @@ destroy_adjacent:
     ret
 .left:
     ld a, b
+    cp a, 0
+    ret z
+    cp a, 7
+    ret z
+    cp a, 14
+    ret z
+    cp a, 21
+    ret z
     sub a, 8
     call destroy_tile
     add a, 7
@@ -678,13 +706,24 @@ destroy_adjacent:
     add a, 6
     cp a, 27
     ret nc
-    call destroy_tile
+    cp a, 6
+    jr z, .down_middle
+    cp a, 13
+    jr z, .down_middle
+    cp a, 20
+    call nz, destroy_tile
+.down_middle:
     inc a
     call destroy_tile
     inc a
+    cp a, 7
+    ret z
+    cp a, 14
+    ret z
+    cp a, 21
+    ret z
     call destroy_tile
     ret
-    
 
 draw_marker:
     push hl

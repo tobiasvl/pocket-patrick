@@ -79,6 +79,7 @@ STEPS: DB
 SCORE: DW
 SCORE_WIN: DB
 SCORE_LOSE: DB
+HIGH_SCORE: DW
 
 Tile_Status:
 ; 1 - patrick
@@ -197,6 +198,7 @@ INCLUDE "font.z80"
 
 SECTION "SRAM check", SRAM
 SRAM_present: DB
+SRAM_highscore: DW
 
 SECTION "Game logic", ROM0
 
@@ -259,13 +261,78 @@ init:
     cp a, SRAM_check
     jr z, .SRAM_ok
     ; Blank SRAM
+    xor a
+    ld hl, _SRAM
+    ld bc, 32
+    call mem_Set
     ld a, SRAM_check
     ld [SRAM_present], a
-    ld h, 0
-    ld l, h
-    ld [hl], h ; Disable SRAM
 .SRAM_ok:
+    ld a, [SRAM_highscore]
+    ld [HIGH_SCORE], a
+    ld a, [SRAM_highscore+1]
+    ld [HIGH_SCORE+1], a
+    ld [hl], h ; Disable SRAM
+
     call StartLCD
+    PRINT "PATRICK S",$9826
+    PRINT "POCKET",$9847
+    PRINT "CHALLENGE",$9866
+    PRINT "START",$98e8
+    PRINT "TUTORIAL",$9908
+    PRINT "HISCORE",$99a4
+    PRINT "BY",$9a09
+    PRINT "TOBIASVL",$9a26
+
+    call wait_vblank
+    ld hl, $99ac
+    ld de, HIGH_SCORE
+    ld a, [de]
+    and a, $0f
+    add a, $30
+    ld [hl+], a
+    inc de
+    ld a, [de]
+    sra a
+    sra a
+    sra a
+    sra a
+    and a, $0f
+    add a, $30
+    ld [hl+], a
+    ld a, [de]
+    and a, $0f
+    add a, $30
+    ld [hl], a
+MainMenu:
+    call wait_vblank
+    call ReadJoyPad
+    ;ldh a,[hPadPressed]
+    ;and BUTTON_LEFT
+    ;jr nz, .left
+    ;ldh a,[hPadPressed]
+    ;and BUTTON_RIGHT
+    ;jr nz,.right
+    ;ldh a,[hPadPressed]
+    ;and BUTTON_UP
+    ;jp nz,.up
+    ;ldh a,[hPadPressed]
+    ;and BUTTON_DOWN
+    ;jr nz,.down
+    ldh a,[hPadPressed]
+    and BUTTON_A
+    jp nz, Play
+    ;ldh a,[hPadPressed]
+    ;and BUTTON_B
+    ;jp nz,.button_b
+    jr MainMenu
+
+Play:
+    ; BLANK VRAM
+    xor a
+    ld hl, _SCRN0
+    ld bc, _SCRN1-_SCRN0
+    call mem_SetVRAM
 
 GenerateLevel:
     ld a, $60
@@ -673,6 +740,10 @@ lose:
     ld a, [hl]
     dec a
     daa
+    jr nc, .not_zero
+    xor a
+    ld [hl+], a
+.not_zero:
     ld [hl], a
     jp GenerateLevel
 
@@ -687,11 +758,29 @@ win:
     add a, [hl]
     daa
     ld [hl-], a
-    jp nc, GenerateLevel
+    jp nc, .store_hiscore
     ld a, [hl]
     inc a
     daa
     ld [hl], a
+.store_hiscore
+    ld hl, HIGH_SCORE
+    cp a, [hl]
+    jp c, GenerateLevel
+    inc hl
+    ld a, [SCORE+1]
+    cp a, [hl]
+    jp c, GenerateLevel
+    ld [hl-], a
+    ld a, [SCORE]
+    ld [hl], a
+    ld h, 0
+    ld l, h
+    ld [hl], CART_RAM_ENABLE
+    ld [SRAM_highscore], a
+    ld a, [SCORE+1]
+    ld [SRAM_highscore+1], a
+    ld [hl], h ; Disable SRAM
     jp GenerateLevel
 
 destroy_tile:

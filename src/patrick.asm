@@ -306,18 +306,16 @@ init:
     ld bc, $DFFD-_RAM-2 ; Don't clear seed
     call mem_Set
 
-    ld a, %10010011 ; palette
+    ld a, %11100100
     ld [rOBP0], a
-    ld a, %00000000
-    ld [rOBP1], a
     ld a, %11100100
     ld [rBGP], a
 
     ld hl, TilesFont
-    ld de, $82b0
-    ld bc, 16*16
+    ld de, $8270
+    ld bc, 16*20
     call mem_CopyVRAM
-    ld hl, TilesFont+(16*16)
+    ld hl, TilesFont+(16*20)
     ld de, $8410
     ld bc, 16*26
     call mem_CopyVRAM
@@ -384,14 +382,70 @@ TitleScreen:
     ld bc, _SCRN1-_SCRN0
     call mem_SetVRAM
 
-    PRINT "PATRICK S",$9826
-    PRINT "POCKET",$9847
+    PRINT "PATRICK'S",$9826
+    PRINT "P O C K E T",$9845
     PRINT "CHALLENGE",$9866
-    PRINT "START",$98e8
-    PRINT "TUTORIAL",$9908
+    ;PRINT "START",$98e8
+    ;PRINT "TUTORIAL",$9908
     PRINT "HISCORE:",$99a4
     PRINT "BY",$9a09
     PRINT "TOBIASVL",$9a26
+
+.place_sprites:
+   call wait_vblank
+   ld a, 70
+   ld [$fe00], a
+   ld [$fe04], a
+   ld [$fe08], a
+   ld [$fe0c], a
+   ld [$fe10], a
+   ld [$fe14], a
+   ld [$fe18], a
+   ld [$fe1c], a
+   ld [$fe20], a
+   ld [$fe24], a
+   ld a, 44
+   ld [$fe01], a
+   ld a, "P"
+   ld [$fe02], a
+   ld a, 52
+   ld [$fe05], a
+   ld a, "R"
+   ld [$fe06], a
+   ld a, 60
+   ld [$fe09], a
+   ld a, "E"
+   ld [$fe0A], a
+   ld a, 68
+   ld [$fe0D], a
+   ld a, "S"
+   ld [$fe0E], a
+   ld a, 76
+   ld [$fe11], a
+   ld a, "S"
+   ld [$fe12], a
+
+   call wait_vblank
+   ld a, 94
+   ld [$fe15], a
+   ld a, "S"
+   ld [$fe16], a
+   ld a, 102
+   ld [$fe19], a
+   ld a, "T"
+   ld [$fe1A], a
+   ld a, 110
+   ld [$fe1D], a
+   ld a, "A"
+   ld [$fe1E], a
+   ld a, 118
+   ld [$fe21], a
+   ld a, "R"
+   ld [$fe22], a
+   ld a, 126
+   ld [$fe25], a
+   ld a, "T"
+   ld [$fe26], a
 
     call wait_vblank
     ld hl, $99ad
@@ -413,30 +467,50 @@ TitleScreen:
     and a, $0f
     add a, $30
     ld [hl], a
+
     ld a, 1
     ld [LEVEL], a
+
+    ld d, 0
 MainMenu:
+    inc d
+    call wait_vblank
+    ld a, d
+    cp a, 50
+    jr nz, .input_loop
+    ld a, [rLCDC]
+    xor a, LCDCF_OBJON
+    ld [rLCDC], a
+    ld d, 0
+.input_loop:
     call wait_vblank
     call ReadJoyPad
-    ;ldh a,[hPadPressed]
-    ;and BUTTON_LEFT
-    ;jr nz, .left
-    ;ldh a,[hPadPressed]
-    ;and BUTTON_RIGHT
-    ;jr nz,.right
+    ;;ldh a,[hPadPressed]
+    ;;and BUTTON_LEFT
+    ;;jr nz, .left
+    ;;ldh a,[hPadPressed]
+    ;;and BUTTON_RIGHT
+    ;;jr nz,.right
     ;ldh a,[hPadPressed]
     ;and BUTTON_UP
     ;jp nz,.up
     ;ldh a,[hPadPressed]
     ;and BUTTON_DOWN
     ;jr nz,.down
-    ldh a,[hPadPressed]
+    ;ldh a,[hPadPressed]
     and BUTTON_A
     jp nz, Play
-    ;ldh a,[hPadPressed]
-    ;and BUTTON_B
-    ;jp nz,.button_b
+    ldh a,[hPadPressed]
+    and BUTTON_START
+    jp nz, Play
+    ldh a,[hPadPressed]
     jr MainMenu
+    ;;and BUTTON_B
+    ;;jp nz,.button_b
+    ;jr MainMenu
+;.down:
+;.up:
+;.button_a:
 
 Play:
     ; BLANK VRAM
@@ -556,8 +630,6 @@ Load_Level:
     cp a, 28
     jp nz, .draw_tile
 
-    call StartLCD
-
     ld hl, REMAINING_TILES
     ld [hl], a
 
@@ -566,10 +638,11 @@ Load_Level:
     PRINT "WIN   +", $99C3
     PRINT "LOSE  -", $99E3
     call print_info
-    call wait_vblank
     ld a, [rLCDC]
     or a, LCDCF_OBJON
     ld [rLCDC], a
+
+    call StartLCD
 
 GameLoop:
     call wait_vblank
@@ -1106,6 +1179,8 @@ init_marker:
     ld bc, 4*4 ;4*4*7
     call mem_Copy
     call wait_vblank
+    ld a, %10010011 ; palette
+    ld [rOBP0], a
     call $ff90
     ret
 

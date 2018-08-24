@@ -841,6 +841,11 @@ GameLoop:
     jp nz, GameLoop
 
 lose:
+    xor a
+    ld hl, $99c3
+    ld bc, 9
+    call mem_SetVRAM
+
     ld a, [PATRICK_TILE]
     ld hl, Tile_Positions
     sla a
@@ -877,6 +882,11 @@ lose:
     jr game_over
 
 win:
+    xor a
+    ld hl, $99e3
+    ld bc, 9
+    call mem_SetVRAM
+
     ld a, [PATRICK_TILE]
     ld hl, Tile_Positions
     sla a
@@ -924,7 +934,6 @@ win:
     ld [hl], h ; Disable SRAM
 
 game_over:
-
     ld a, [rLCDC]
     xor a, LCDCF_OBJON
     ld [rLCDC], a

@@ -3,6 +3,41 @@
 INCLUDE "hardware.inc" ; standard hardware definitions from devrs.com
 
 ; IRQs
+; copy x-bytes to [de]
+SECTION "Copy Data",ROM0[$28]
+COPY_DATA:
+  ; pop return address off stack into hl
+  pop hl
+  ; here we get the number of bytes to copy
+  ; hl contains the address of the bytes following the "rst $28" call
+
+  ; counter
+  ld a, [hl+]
+  ld c, a
+
+  ; bc now contains $000D
+  ; hl now points to the first byte of our assembled subroutine (which is $F5)
+  ; begin copying data
+.copy_data_loop:
+  ; load a byte of data into a
+  ld a, [hl+]
+
+  ; store the byte in de, our destination ($FF80 in this context)
+  ld [de], a
+
+  ; go to the next destination byte, decrease counter
+  inc de
+  dec c
+
+  ; check if counter is zero, if not repeat loop
+  ld a, c
+  or a
+  jr nz,.copy_data_loop
+
+  ; all done, return home
+  jp hl
+  reti
+
 SECTION    "Vblank",ROM0[$0040]
 ;    push hl
 ;    ld hl, VBLANK_FLAG
@@ -54,6 +89,30 @@ StopLCD:
     ld [rLCDC], a
     ret
 
+DMA_COPY:
+  ; load de with the HRAM destination address
+  ld  de, $ff90
+  rst $28
+  DB .end_of_DMA_routine-.DMA_routine ; number of bytes to copy
+
+; Copy this into HRAM:
+.DMA_routine:
+  ; first we load $C1 into the DMA register at $FF46
+  push af
+  ld a, $C1
+  ld [$FF46], a
+
+  ; DMA transfer begins, we need to wait 160 microseconds while it transfers
+  ; the following loop takes exactly that long
+  ld a, $28
+.loop:
+  dec a
+  jr nz, .loop
+  pop af
+  reti
+.end_of_DMA_routine:
+  ret
+
 SECTION    "start",ROM0[$0100]
 nop
 jp    begin
@@ -67,8 +126,6 @@ SECTION "Variables", WRAM0
 ; TODO Move some of these variables to HRAM?
 Seed: DS 3
 VBLANK_FLAG: DB
-MARKER_Y: DB
-MARKER_X: DB
 MARKER_TILE: DB
 PATRICK_Y: DB
 PATRICK_X: DB
@@ -93,6 +150,12 @@ DS 28
 
 Ball_Status:
 DS 7
+
+SECTION "OAM data",WRAM0[$C100]
+OAM_SpriteData:
+MARKER_Y: DB
+MARKER_X: DB
+DS (4*4)-2 ; 4*4*7
 
 SECTION "Constants", ROM0, ALIGN[8]
 SRAM_check EQU 42 ; TODO: change?
@@ -137,14 +200,14 @@ WIN_PATRICK EQU $8D
 
 SpriteData:
     DB 0,0,$85,0,0,0,$86,0,0,0,$87,0,0,0,$88,0
-    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
-    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
-    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
-    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
-    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
-    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+;    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+;    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+;    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+;    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+;    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
+;    DB 0,0,$61,0,0,0,$62,0,0,0,$63,0,0,0,$64,0
 
-SECTION "HiRAM", HRAM
+SECTION "Joypad variables", HRAM
 
 hPadPressed::   ds 1
 hPadHeld::      ds 1
@@ -231,14 +294,17 @@ init:
     ld bc,$FE9F-_OAMRAM+1
     call mem_Set
 
+    call DMA_COPY
+
     ; BLANK VRAM
+    xor a
     ld hl, _SCRN0
     ld bc, _SCRN1-_SCRN0
     call mem_SetVRAM
 
     ; Blank HRAM
     ld hl, _HRAM
-    ld bc, 63
+    ld bc, 4
     call mem_Set
 
     ; Blank WRAM
@@ -386,6 +452,7 @@ GenerateLevel:
     jr .ball_loop
 
 Load_Level:
+    call init_marker
     xor a
 .draw_tile:
     push af
@@ -439,7 +506,6 @@ Load_Level:
 
     ld a, PATRICK
     call draw_patrick
-    call init_marker
     jr .done
 
 .empty_tile:
@@ -996,9 +1062,11 @@ destroy_adjacent:
 
 init_marker:
     ld hl, SpriteData
-    ld de, _OAMRAM
-    ld bc, 4*4*7
-    call mem_CopyVRAM
+    ld de, OAM_SpriteData
+    ld bc, 4*4 ;4*4*7
+    call mem_Copy
+    call wait_vblank
+    call $ff90
     ret
 
 draw_marker:
@@ -1010,34 +1078,36 @@ draw_marker:
     inc hl
     ld e, [hl]
 
+    ld hl, OAM_SpriteData
+    ld a, d
+    ld [hl+], a
+    ld a, e
+    ld [hl], a
+    add hl, bc
+
+    ld a, d
+    ld [hl+], a
+    ld a, e
+    add a, 8
+    ld [hl], a
+    add hl, bc
+
+    ld a, d
+    add a, 8
+    ld [hl+], a
+    ld a, e
+    ld [hl], a
+    add hl, bc
+
+    ld a, d
+    add a, 8
+    ld [hl+], a
+    ld a, e
+    add a, 8
+    ld [hl], a
+
     call wait_vblank
-    ld hl, _OAMRAM
-    ld a, d
-    ld [hl+], a
-    ld a, e
-    ld [hl], a
-    add hl, bc
-
-    ld a, d
-    ld [hl+], a
-    ld a, e
-    add a, 8
-    ld [hl], a
-    add hl, bc
-
-    ld a, d
-    add a, 8
-    ld [hl+], a
-    ld a, e
-    ld [hl], a
-    add hl, bc
-
-    ld a, d
-    add a, 8
-    ld [hl+], a
-    ld a, e
-    add a, 8
-    ld [hl], a
+    call $ff90
 
     ret
 

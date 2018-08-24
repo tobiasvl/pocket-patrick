@@ -296,12 +296,6 @@ init:
 
     call DMA_COPY
 
-    ; BLANK VRAM
-    xor a
-    ld hl, _SCRN0
-    ld bc, _SCRN1-_SCRN0
-    call mem_SetVRAM
-
     ; Blank HRAM
     ld hl, _HRAM
     ld bc, 4
@@ -353,7 +347,43 @@ init:
     ld [HIGH_SCORE+1], a
     ld [hl], h ; Disable SRAM
 
+NintendoLogo:
+    ld a, WIN_PATRICK
+    ld hl, $9900
+    push hl
+    call draw_patrick+3
+    pop hl
+
     call StartLCD
+    ld d, 10
+    ld e, 20
+.foo:
+    call wait_vblank
+    dec e
+    jr nz, .foo
+    ld e, 20
+
+    ld a, $a0
+    call draw_patrick+3
+
+    ld a, l
+    sub a, $1f
+    ld l, a
+    ld a, WIN_PATRICK
+    push hl
+    call draw_patrick+3
+    pop hl
+
+    dec d
+    jr nz, .foo
+
+TitleScreen:
+    ; BLANK VRAM
+    xor a
+    ld hl, _SCRN0
+    ld bc, _SCRN1-_SCRN0
+    call mem_SetVRAM
+
     PRINT "PATRICK S",$9826
     PRINT "POCKET",$9847
     PRINT "CHALLENGE",$9866

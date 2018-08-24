@@ -483,6 +483,7 @@ GenerateLevel:
 
 Load_Level:
     call init_marker
+    call StopLCD
     xor a
 .draw_tile:
     push af
@@ -509,7 +510,6 @@ Load_Level:
     sla a
     sla a
     add a, $65
-    call wait_vblank
     ld [hl+], a
     inc a
     ld [hl], a
@@ -535,12 +535,11 @@ Load_Level:
     ld [MARKER_X], a
 
     ld a, PATRICK
-    call draw_patrick
+    call draw_patrick+3
     jr .done
 
 .empty_tile:
     ld a, $61
-    call wait_vblank
     ld [hl+], a
     inc a
     ld [hl], a
@@ -556,6 +555,8 @@ Load_Level:
     inc a
     cp a, 28
     jp nz, .draw_tile
+
+    call StartLCD
 
     ld hl, REMAINING_TILES
     ld [hl], a

@@ -317,6 +317,8 @@ init:
     and a, $0f
     add a, $30
     ld [hl], a
+    ld a, 1
+    ld [LEVEL], a
 MainMenu:
     call wait_vblank
     call ReadJoyPad

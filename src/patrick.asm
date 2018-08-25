@@ -287,8 +287,9 @@ begin:
     ei
 
 init:
-    call StopLCD
+    ;call StopLCD
     ; Blank OAM
+    call wait_vblank
     xor a
     ld hl, _OAMRAM
     ld bc,$FE9F-_OAMRAM+1
@@ -346,13 +347,14 @@ init:
     ld [hl], h ; Disable SRAM
 
 NintendoLogo:
+    call wait_vblank
     ld a, WIN_PATRICK
     ld hl, $9900
     push hl
     call draw_patrick+3
     pop hl
 
-    call StartLCD
+    ;call StartLCD
     ld d, 10
     ld e, 20
 .foo:

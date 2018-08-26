@@ -161,7 +161,7 @@ SECTION "Constants", ROM0, ALIGN[8]
 SRAM_check EQU 42 ; TODO: change?
 
 Tile_Positions:
-board_start = $9863
+board_start = $9883
 DW board_start
 DW board_start+$2
 DW board_start+$4
@@ -643,11 +643,12 @@ Load_Level:
     ld hl, REMAINING_TILES
     ld [hl], a
 
-    PRINT "LEVEL", $9983
-    PRINT "SCORE", $99A3
-    PRINT "WIN   +", $99C3
-    PRINT "LOSE  -", $99E3
+    PRINT "LEVEL", board_start+$120
+    PRINT "SCORE", board_start+$140
+    PRINT "WIN   +", board_start+$160
+    PRINT "LOSE  -", board_start+$180
     call print_info
+    call print_balls
     ld a, [rLCDC]
     or a, LCDCF_OBJON
     ld [rLCDC], a
@@ -848,7 +849,6 @@ GameLoop:
     daa
     ld [hl], a
     call wait_vblank
-
     call print_info
 
     ld hl, REMAINING_TILES
@@ -864,25 +864,25 @@ GameLoop:
     sub a, 16
     ld e, a
     call get_map_position
-    xor a
+    ld a, $60
     cp a, [hl]
-    jp nz, GameLoop
+    jp c, GameLoop
 
     ld a, e
     add a, 16
     ld e, a
     call get_map_position
-    xor a
+    ld a, $60
     cp a, [hl]
-    jp nz, GameLoop
+    jp c, GameLoop
 
     ld a, e
     add a, 16
     ld e, a
     call get_map_position
-    xor a
+    ld a, $60
     cp a, [hl]
-    jp nz, GameLoop
+    jp c, GameLoop
 
     ld a, d
     add a, 16
@@ -926,7 +926,7 @@ GameLoop:
 
 lose:
     xor a
-    ld hl, $99c3
+    ld hl, board_start+$160
     ld bc, 9
     call mem_SetVRAM
 
@@ -967,7 +967,7 @@ lose:
 
 win:
     xor a
-    ld hl, $99e3
+    ld hl, board_start+$180
     ld bc, 9
     call mem_SetVRAM
 
@@ -1421,7 +1421,7 @@ get_sprite_position:
     ret
 
 print_info:
-    ld hl, $998a
+    ld hl, board_start+$127
     ld de, LEVEL
     ld a, [de]
     sra a
@@ -1436,7 +1436,7 @@ print_info:
     add a, $30
     ld [hl+], a
 
-    ld hl, $99a9
+    ld hl, board_start+$146
     ld de, SCORE
     ld a, [de]
     and a, $0f
@@ -1456,7 +1456,7 @@ print_info:
     add a, $30
     ld [hl], a
 
-    ld hl, $99ca
+    ld hl, board_start+$167
     ld de, SCORE_WIN
     ld a, [de]
     sra a
@@ -1471,7 +1471,7 @@ print_info:
     add a, $30
     ld [hl], a
 
-    ld l, $ea
+    ld hl, board_start+$187
     ld de, SCORE_LOSE
     ld a, [de]
     sra a
@@ -1486,3 +1486,56 @@ print_info:
     add a, $30
     ld [hl], a
     ret
+
+print_balls:
+    xor a
+    ld hl, board_start-$60
+    ld bc, $2c
+    call mem_SetVRAM
+
+    ld hl, Ball_Status
+    ld de, board_start-$60
+    ld c, 7
+.loop_ball:
+    ld a, e
+    cp a, $30
+    jr c, .ten
+    ld e, $43
+.ten:
+    ld a, [hl+]
+    inc a
+    call bin2bcd
+    ld b, a
+    and a, $f0
+    jr z, .one
+    sra a
+    sra a
+    sra a
+    sra a
+    add a, $30
+    ld [de], a
+    inc de
+.one:
+    ld a, b
+    and a, $0f
+    add a, $30
+    ld [de], a
+    inc de
+    inc de
+    dec c
+    jr nz, .loop_ball
+    ret
+
+bin2bcd:
+   	push	bc
+   	ld	c, a
+   	ld	b, 8
+   	xor	a
+.loop:
+   	sla	c
+   	adc	a, a
+   	daa
+    dec b
+   	jr nz, .loop
+   	pop	bc
+   	ret

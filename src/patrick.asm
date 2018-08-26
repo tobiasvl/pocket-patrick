@@ -271,6 +271,7 @@ SECTION "Game tiles", ROM0
 INCLUDE "patrick_tiles.z80"
 INCLUDE "patrick_map.z80"
 INCLUDE "font.z80"
+INCLUDE "patrick_logo.z80"
 
 SECTION "SRAM check", SRAM
 SRAM_present: DB
@@ -384,9 +385,16 @@ TitleScreen:
     ld bc, _SCRN1-_SCRN0
     call mem_SetVRAM
 
-    PRINT "PATRICK'S",$9826
-    PRINT "P O C K E T",$9845
-    PRINT "CHALLENGE",$9866
+    ld hl, patrick_logo_tile_data
+    ld de, $8a00
+    ld bc, patrick_logo_tile_data_size
+    call mem_CopyVRAM
+
+    ld hl, patrick_logo_map_data
+    ld de, $9820
+    ld bc, _SCRN1-_SCRN0
+    call mem_CopyVRAM
+
     ;PRINT "START",$98e8
     ;PRINT "TUTORIAL",$9908
     PRINT "HISCORE:",$99a4
@@ -395,7 +403,7 @@ TitleScreen:
 
 .place_sprites:
    call wait_vblank
-   ld a, 70
+   ld a, 100
    ld [$fe00], a
    ld [$fe04], a
    ld [$fe08], a
